@@ -60,3 +60,18 @@ export interface LinkedInActivity {
   assigned_rep_id: string | null;
   notes: string | null;
 }
+
+export interface LinkedInDailyStat {
+  date: string;
+  new_followers: number;
+  unique_visitors: number;
+  page_views: number;
+}
+
+export interface LinkedInAudienceStat {
+  id: string;
+  source: 'followers' | 'visitors';
+  category: string;
+  label: string;
+  value: number;
+}
