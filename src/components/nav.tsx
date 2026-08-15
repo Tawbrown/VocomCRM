@@ -14,7 +14,8 @@ const LINKS = [
   { href: '/linkedin-marketing', label: 'LinkedIn Marketing' },
   { href: '/seo', label: 'SEO' },
   { href: '/contacts', label: 'Contacts' },
-  { href: '/sales-team', label: 'Sales Team' }
+  { href: '/sales-team', label: 'Sales Team' },
+  { href: '/feedback', label: 'Feedback' }
 ];
 
 export function Nav() {

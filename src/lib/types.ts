@@ -22,6 +22,9 @@ export const DEAL_PIPELINE_STATUSES: DealPipelineStatus[] = [
   'Lost'
 ];
 
+export type FeedbackStatus = 'Open' | 'In Progress' | 'Resolved' | "Won't Fix";
+export const FEEDBACK_STATUSES: FeedbackStatus[] = ['Open', 'In Progress', 'Resolved', "Won't Fix"];
+
 export interface Rep {
   id: string;
   name: string;
@@ -140,6 +143,16 @@ export interface Deal {
   expected_close_date: string | null;
   assigned_rep_id: string | null;
   notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Feedback {
+  id: string;
+  title: string;
+  description: string | null;
+  submitted_by_rep_id: string | null;
+  status: FeedbackStatus;
   created_at: string;
   updated_at: string;
 }

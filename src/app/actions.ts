@@ -2,7 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import type { DealPipelineStatus, DealStatus, LeadStatus, LinkedInActivityType } from '@/lib/types';
+import type {
+  DealPipelineStatus,
+  DealStatus,
+  FeedbackStatus,
+  LeadStatus,
+  LinkedInActivityType
+} from '@/lib/types';
 
 export async function updateWebsiteLead(
   id: string,
@@ -126,6 +132,31 @@ export async function deleteDeal(id: string) {
   const supabase = await createClient();
   await supabase.from('deals').delete().eq('id', id);
   revalidatePath('/deals');
+}
+
+export async function addFeedback(formData: FormData) {
+  const supabase = await createClient();
+  const title = (formData.get('title') as string)?.trim();
+  if (!title) return;
+
+  await supabase.from('feedback').insert({
+    title,
+    description: (formData.get('description') as string) || null,
+    submitted_by_rep_id: (formData.get('submitted_by_rep_id') as string) || null
+  });
+  revalidatePath('/feedback');
+}
+
+export async function updateFeedbackStatus(id: string, status: FeedbackStatus) {
+  const supabase = await createClient();
+  await supabase.from('feedback').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+  revalidatePath('/feedback');
+}
+
+export async function deleteFeedback(id: string) {
+  const supabase = await createClient();
+  await supabase.from('feedback').delete().eq('id', id);
+  revalidatePath('/feedback');
 }
 
 export async function signOut() {

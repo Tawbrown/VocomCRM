@@ -11,7 +11,13 @@ const STATUS_COLORS: Record<string, string> = {
   Conversation: 'bg-amber-100 text-amber-700',
   Meeting: 'bg-purple-100 text-purple-700',
   Won: 'bg-green-100 text-green-700',
-  Lost: 'bg-red-100 text-red-700'
+  Lost: 'bg-red-100 text-red-700',
+  Proposal: 'bg-blue-100 text-blue-700',
+  Negotiation: 'bg-amber-100 text-amber-700',
+  Open: 'bg-neutral-100 text-neutral-700',
+  'In Progress': 'bg-blue-100 text-blue-700',
+  Resolved: 'bg-green-100 text-green-700',
+  "Won't Fix": 'bg-red-100 text-red-700'
 };
 
 export function StatusSelect({
