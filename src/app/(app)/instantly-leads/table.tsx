@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { updateInstantlyLead } from '@/app/actions';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import type { InstantlyLead, Rep } from '@/lib/types';
+import { INTEREST_FILTERS } from './constants';
 
 const INTEREST_COLORS: Record<string, string> = {
   Interested: 'bg-green-100 text-green-700',
@@ -18,8 +20,6 @@ const INTEREST_COLORS: Record<string, string> = {
   'No Show': 'bg-red-100 text-red-700',
   Uncontacted: 'bg-neutral-100 text-neutral-500'
 };
-
-const FILTERS = ['All', 'Interested', 'Out of Office', 'Meeting Booked', 'Uncontacted'];
 
 function ReplyModal({ lead, onClose }: { lead: InstantlyLead; onClose: () => void }) {
   return (
@@ -57,41 +57,60 @@ function ReplyModal({ lead, onClose }: { lead: InstantlyLead; onClose: () => voi
 export function InstantlyLeadsTable({
   leads,
   reps,
-  statuses
+  statuses,
+  filter,
+  coldCallOnly,
+  page,
+  pageSize,
+  totalCount,
+  coldCallCount,
+  filterCounts
 }: {
   leads: InstantlyLead[];
   reps: Rep[];
   statuses: string[];
+  filter: string;
+  coldCallOnly: boolean;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  coldCallCount: number;
+  filterCounts: Record<string, number>;
 }) {
-  const [filter, setFilter] = useState('All');
-  const [coldCallOnly, setColdCallOnly] = useState(false);
   const [openReply, setOpenReply] = useState<InstantlyLead | null>(null);
 
-  const coldCallCount = leads.filter((lead) => lead.needs_cold_call).length;
+  const interestHref = (f: string) => `?filter=${encodeURIComponent(f)}`;
+  const coldCallHref = coldCallOnly ? '?filter=All' : '?filter=All&coldCall=1';
 
-  const filtered = leads
-    .filter((lead) => filter === 'All' || lead.interest_status === filter)
-    .filter((lead) => !coldCallOnly || lead.needs_cold_call);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const baseParams = new URLSearchParams();
+  if (filter !== 'All') baseParams.set('filter', filter);
+  if (coldCallOnly) baseParams.set('coldCall', '1');
+  const pageHref = (p: number) => {
+    const params = new URLSearchParams(baseParams);
+    params.set('page', String(p));
+    return `?${params.toString()}`;
+  };
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {FILTERS.map((f) => (
-          <button
+        {INTEREST_FILTERS.map((f) => (
+          <Link
             key={f}
-            onClick={() => setFilter(f)}
+            href={interestHref(f)}
             className={`rounded-full px-3 py-1 text-xs font-medium ${
-              filter === f
+              filter === f && !coldCallOnly
                 ? 'bg-neutral-900 text-white'
                 : 'bg-white text-neutral-600 ring-1 ring-inset ring-neutral-200 hover:bg-neutral-100'
             }`}
           >
-            {f}
-          </button>
+            {f} ({filterCounts[f] ?? 0})
+          </Link>
         ))}
         <span className="mx-1 h-4 w-px bg-neutral-200" />
-        <button
-          onClick={() => setColdCallOnly((v) => !v)}
+        <Link
+          href={coldCallHref}
           className={`rounded-full px-3 py-1 text-xs font-medium ${
             coldCallOnly
               ? 'bg-red-600 text-white'
@@ -99,10 +118,10 @@ export function InstantlyLeadsTable({
           }`}
         >
           📞 Needs Cold Call ({coldCallCount})
-        </button>
+        </Link>
       </div>
 
-      {filtered.length === 0 ? (
+      {leads.length === 0 ? (
         <p className="text-sm text-neutral-500">No leads match this filter.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm">
@@ -121,7 +140,7 @@ export function InstantlyLeadsTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {filtered.map((lead) => (
+              {leads.map((lead) => (
                 <tr key={lead.id} className={lead.needs_cold_call ? 'bg-red-50/50' : undefined}>
                   <td className="px-4 py-3 text-neutral-900">
                     {lead.linkedin_url ? (
@@ -197,6 +216,34 @@ export function InstantlyLeadsTable({
               ))}
             </tbody>
           </table>
+
+          <div className="flex items-center justify-between border-t border-neutral-100 px-4 py-3 text-sm text-neutral-500">
+            <span>
+              {totalCount === 0
+                ? '0 results'
+                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalCount)} of ${totalCount}`}
+            </span>
+            <div className="flex gap-2">
+              <Link
+                href={pageHref(Math.max(1, page - 1))}
+                aria-disabled={page <= 1}
+                className={`rounded-md px-3 py-1 ring-1 ring-inset ring-neutral-200 ${
+                  page <= 1 ? 'pointer-events-none text-neutral-300' : 'hover:bg-neutral-100'
+                }`}
+              >
+                Previous
+              </Link>
+              <Link
+                href={pageHref(Math.min(totalPages, page + 1))}
+                aria-disabled={page >= totalPages}
+                className={`rounded-md px-3 py-1 ring-1 ring-inset ring-neutral-200 ${
+                  page >= totalPages ? 'pointer-events-none text-neutral-300' : 'hover:bg-neutral-100'
+                }`}
+              >
+                Next
+              </Link>
+            </div>
+          </div>
         </div>
       )}
 
