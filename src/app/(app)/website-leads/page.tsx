@@ -1,6 +1,5 @@
 import { BarTrend } from '@/components/bar-trend';
 import { BreakdownBars } from '@/components/breakdown-bars';
-import { buildDailyCounts } from '@/lib/daily-counts';
 import { createClient } from '@/lib/supabase/server';
 import { LEAD_STATUSES, type Rep, type WebsiteLead } from '@/lib/types';
 import { WebsiteLeadsTable } from './table';
@@ -26,10 +25,7 @@ export default async function WebsiteLeadsPage() {
   ]);
 
   const allLeads = leads ?? [];
-  const dailyCounts = buildDailyCounts(
-    allLeads.map((l) => l.created_at),
-    30
-  );
+  const dailyPoints = allLeads.map((l) => ({ date: l.created_at, value: 1 }));
   const statusBreakdown = LEAD_STATUSES.map((status) => ({
     label: status,
     count: allLeads.filter((l) => l.status === status).length,
@@ -42,7 +38,7 @@ export default async function WebsiteLeadsPage() {
       <p className="mb-6 text-sm text-neutral-500">From the Framer site contact form.</p>
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <BarTrend title="New leads" subtitle="last 30 days" data={dailyCounts} />
+        <BarTrend title="New leads" data={dailyPoints} colorClass="bg-blue-500" />
         <BreakdownBars title="By status" items={statusBreakdown} />
       </div>
 

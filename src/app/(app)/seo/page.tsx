@@ -3,20 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import type { SeoLandingPage, SeoMonthlyReport, SeoSearchQuery } from '@/lib/types';
 import { QueriesTable } from './queries-table';
 
-function dailySeries(rows: { date: string; value: number }[], days: number) {
-  const byDate = new Map<string, number>();
-  const today = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    byDate.set(d.toISOString().slice(0, 10), 0);
-  }
-  for (const row of rows) {
-    if (byDate.has(row.date)) byDate.set(row.date, (byDate.get(row.date) ?? 0) + row.value);
-  }
-  return [...byDate.entries()].map(([date, value]) => ({ date, value }));
-}
-
 function aggregateQueries(rows: SeoSearchQuery[]) {
   const byQuery = new Map<
     string,
@@ -54,7 +40,7 @@ function aggregateQueries(rows: SeoSearchQuery[]) {
 export default async function SeoPage() {
   const supabase = await createClient();
   const since = new Date();
-  since.setDate(since.getDate() - 90);
+  since.setDate(since.getDate() - 400); // covers the 1Y toggle option, however much history exists
   const sinceIso = since.toISOString().slice(0, 10);
 
   const [{ data: queryRows }, { data: landingRows }, { data: reports }] = await Promise.all([
@@ -76,20 +62,10 @@ export default async function SeoPage() {
   const aggregated = aggregateQueries(queryRows ?? []);
   const latestReport = reports?.[0] ?? null;
 
-  const clicksByDay = dailySeries(
-    (queryRows ?? []).map((r) => ({ date: r.date, value: r.clicks })),
-    90
-  );
-  const impressionsByDay = dailySeries(
-    (queryRows ?? []).map((r) => ({ date: r.date, value: r.impressions })),
-    90
-  );
-  const sessionsByDay = dailySeries(
-    (landingRows ?? []).map((r) => ({ date: r.date, value: r.sessions })),
-    90
-  );
+  const clicksByDay = (queryRows ?? []).map((r) => ({ date: r.date, value: r.clicks }));
+  const impressionsByDay = (queryRows ?? []).map((r) => ({ date: r.date, value: r.impressions }));
+  const sessionsByDay = (landingRows ?? []).map((r) => ({ date: r.date, value: r.sessions }));
 
-  const totalSessions = (landingRows ?? []).reduce((sum, r) => sum + r.sessions, 0);
   const topPages = Object.entries(
     (landingRows ?? []).reduce<Record<string, number>>((acc, r) => {
       acc[r.page_path] = (acc[r.page_path] ?? 0) + r.sessions;
@@ -145,18 +121,13 @@ export default async function SeoPage() {
       )}
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <BarTrend title="Clicks" subtitle="last 90 days" data={clicksByDay} colorClass="bg-blue-500" />
-        <BarTrend title="Impressions" subtitle="last 90 days" data={impressionsByDay} colorClass="bg-neutral-400" />
-        <BarTrend
-          title="Sessions"
-          subtitle={`${totalSessions.toLocaleString()} total`}
-          data={sessionsByDay}
-          colorClass="bg-green-500"
-        />
+        <BarTrend title="Clicks" data={clicksByDay} colorClass="bg-blue-500" />
+        <BarTrend title="Impressions" data={impressionsByDay} colorClass="bg-neutral-400" />
+        <BarTrend title="Sessions" data={sessionsByDay} colorClass="bg-green-500" />
       </div>
 
       <div className="mb-6 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-        <p className="mb-2 text-sm text-neutral-500">Top landing pages (last 90 days)</p>
+        <p className="mb-2 text-sm text-neutral-500">Top landing pages</p>
         <ul className="space-y-1 text-sm">
           {topPages.length === 0 ? (
             <li className="text-neutral-400">No traffic data yet</li>

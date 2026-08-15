@@ -1,7 +1,7 @@
+import { BarTrend } from '@/components/bar-trend';
 import { createClient } from '@/lib/supabase/server';
 import type { LinkedInAudienceStat, LinkedInDailyStat } from '@/lib/types';
 import { AudienceBreakdown } from './audience-breakdown';
-import { TrendChart } from './trend-chart';
 import { UploadForm } from './upload-form';
 
 export default async function LinkedInMarketingPage() {
@@ -25,8 +25,16 @@ export default async function LinkedInMarketingPage() {
       <UploadForm />
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <TrendChart title="New followers" stats={dailyStats ?? []} field="new_followers" />
-        <TrendChart title="Unique visitors" stats={dailyStats ?? []} field="unique_visitors" />
+        <BarTrend
+          title="New followers"
+          data={(dailyStats ?? []).map((s) => ({ date: s.date, value: s.new_followers }))}
+          colorClass="bg-blue-500"
+        />
+        <BarTrend
+          title="Unique visitors"
+          data={(dailyStats ?? []).map((s) => ({ date: s.date, value: s.unique_visitors }))}
+          colorClass="bg-green-500"
+        />
       </div>
 
       <h2 className="mb-3 text-sm font-semibold text-neutral-900">Follower demographics</h2>

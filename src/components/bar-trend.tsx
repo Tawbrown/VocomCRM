@@ -1,28 +1,114 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { bucketDaily } from '@/lib/daily-counts';
+
+const RANGES: { label: string; days: number | null }[] = [
+  { label: '1D', days: 1 },
+  { label: '7D', days: 7 },
+  { label: '1M', days: 30 },
+  { label: '1Y', days: 365 },
+  { label: 'Max', days: null }
+];
+
+// `points` should be the raw (possibly unaggregated) dated values for the widest range
+// this chart should ever show — the toggle re-buckets client-side from this same array,
+// no extra server round-trip per click.
 export function BarTrend({
   title,
-  subtitle,
   data,
   colorClass = 'bg-neutral-800'
 }: {
   title: string;
-  subtitle?: string;
   data: { date: string; value: number }[];
   colorClass?: string;
 }) {
-  const max = Math.max(1, ...data.map((d) => d.value));
-  const total = data.reduce((sum, d) => sum + d.value, 0);
+  const [range, setRange] = useState<number | null>(30);
+  const [custom, setCustom] = useState<{ from: string; to: string } | null>(null);
+
+  const series = useMemo(() => {
+    if (custom) {
+      return data
+        .filter((p) => p.date.slice(0, 10) >= custom.from && p.date.slice(0, 10) <= custom.to)
+        .reduce<{ date: string; value: number }[]>((acc, p) => {
+          const day = p.date.slice(0, 10);
+          const existing = acc.find((a) => a.date === day);
+          if (existing) existing.value += p.value;
+          else acc.push({ date: day, value: p.value });
+          return acc;
+        }, [])
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+    return bucketDaily(data, range);
+  }, [data, range, custom]);
+
+  const max = Math.max(1, ...series.map((d) => d.value));
+  const total = series.reduce((sum, d) => sum + d.value, 0);
 
   return (
     <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-baseline justify-between">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-medium text-neutral-700">{title}</h3>
-        <span className="text-xs text-neutral-400">{subtitle ?? `${total} total`}</span>
+        <div className="flex items-center gap-1">
+          {RANGES.map((r) => (
+            <button
+              key={r.label}
+              onClick={() => {
+                setRange(r.days);
+                setCustom(null);
+              }}
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                !custom && range === r.days
+                  ? 'bg-neutral-900 text-white'
+                  : 'text-neutral-500 hover:bg-neutral-100'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+          <button
+            onClick={() =>
+              setCustom({
+                from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
+                to: new Date().toISOString().slice(0, 10)
+              })
+            }
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              custom ? 'bg-neutral-900 text-white' : 'text-neutral-500 hover:bg-neutral-100'
+            }`}
+          >
+            Custom
+          </button>
+        </div>
       </div>
+
+      {custom && (
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+          <input
+            type="date"
+            value={custom.from}
+            max={custom.to}
+            onChange={(e) => setCustom({ ...custom, from: e.target.value })}
+            className="rounded-md border border-neutral-300 px-2 py-1 text-neutral-900"
+          />
+          <span>to</span>
+          <input
+            type="date"
+            value={custom.to}
+            min={custom.from}
+            onChange={(e) => setCustom({ ...custom, to: e.target.value })}
+            className="rounded-md border border-neutral-300 px-2 py-1 text-neutral-900"
+          />
+        </div>
+      )}
+
+      <p className="mb-2 text-xs text-neutral-400">{total.toLocaleString()} total</p>
+
       {total === 0 ? (
-        <p className="text-sm text-neutral-500">No data yet.</p>
+        <p className="text-sm text-neutral-500">No data in this range.</p>
       ) : (
         <div className="flex h-24 items-end gap-0.5">
-          {data.map((d) => (
+          {series.map((d) => (
             <div
               key={d.date}
               title={`${d.date}: ${d.value}`}
