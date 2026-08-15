@@ -11,6 +11,7 @@ const LINKS = [
   { href: '/instantly-leads', label: 'Instantly Leads' },
   { href: '/linkedin-activity', label: 'LinkedIn Activity' },
   { href: '/linkedin-marketing', label: 'LinkedIn Marketing' },
+  { href: '/seo', label: 'SEO' },
   { href: '/contacts', label: 'Contacts' },
   { href: '/sales-team', label: 'Sales Team' }
 ];

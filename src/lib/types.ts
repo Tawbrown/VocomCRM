@@ -90,3 +90,38 @@ export interface MasterContact {
   linkedin_url: string | null;
   touched_at: string | null;
 }
+
+export interface SeoSearchQuery {
+  id: string;
+  date: string;
+  query: string;
+  page: string | null;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
+export interface SeoLandingPage {
+  id: string;
+  date: string;
+  page_path: string;
+  sessions: number;
+  active_users: number;
+  conversions: number;
+}
+
+export interface ContentSuggestion {
+  title: string;
+  reason: string;
+  based_on_query: string;
+}
+
+export interface SeoMonthlyReport {
+  id: string;
+  month: string;
+  summary: string;
+  content_suggestions: ContentSuggestion[];
+  stats: { opportunityCount?: number; queriesAnalyzed?: number };
+  generated_at: string;
+}

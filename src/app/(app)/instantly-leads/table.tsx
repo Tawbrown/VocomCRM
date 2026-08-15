@@ -21,6 +21,39 @@ const INTEREST_COLORS: Record<string, string> = {
 
 const FILTERS = ['All', 'Interested', 'Out of Office', 'Meeting Booked', 'Uncontacted'];
 
+function ReplyModal({ lead, onClose }: { lead: InstantlyLead; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-neutral-900">{lead.name || lead.email}</h3>
+            <p className="text-xs text-neutral-500">
+              {lead.company} · {lead.campaign}
+              {lead.last_reply_at ? ` · ${new Date(lead.last_reply_at).toLocaleString()}` : ''}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700">
+            ✕
+          </button>
+        </div>
+        {lead.reply_phone && (
+          <p className="mb-3 rounded-md bg-red-100 px-2 py-1 text-sm font-medium text-red-700">
+            📞 {lead.reply_phone} — extracted from the reply below, double check it&apos;s correct
+          </p>
+        )}
+        <p className="whitespace-pre-wrap text-sm text-neutral-700">{lead.reply_text}</p>
+      </div>
+    </div>
+  );
+}
+
 export function InstantlyLeadsTable({
   leads,
   reps,
@@ -32,6 +65,7 @@ export function InstantlyLeadsTable({
 }) {
   const [filter, setFilter] = useState('All');
   const [coldCallOnly, setColdCallOnly] = useState(false);
+  const [openReply, setOpenReply] = useState<InstantlyLead | null>(null);
 
   const coldCallCount = leads.filter((lead) => lead.needs_cold_call).length;
 
@@ -107,24 +141,24 @@ export function InstantlyLeadsTable({
                   <td className="px-4 py-3 text-neutral-600">{lead.email}</td>
                   <td className="px-4 py-3">
                     {lead.reply_phone ? (
-                      <span
-                        className="rounded-md bg-red-100 px-2 py-1 font-medium text-red-700"
-                        title="Extracted from their reply — double check against the full text before calling"
+                      <button
+                        onClick={() => setOpenReply(lead)}
+                        className="rounded-md bg-red-100 px-2 py-1 font-medium text-red-700 hover:bg-red-200"
                       >
                         📞 {lead.reply_phone}
-                      </span>
+                      </button>
                     ) : (
                       <span className="text-neutral-600">{lead.phone || '—'}</span>
                     )}
                   </td>
-                  <td className="max-w-[220px] px-4 py-3 text-neutral-600">
+                  <td className="px-4 py-3 text-neutral-600">
                     {lead.reply_text ? (
-                      <span
-                        className="block max-w-[220px] truncate"
-                        title={lead.reply_text}
+                      <button
+                        onClick={() => setOpenReply(lead)}
+                        className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-200"
                       >
-                        {lead.reply_text}
-                      </span>
+                        View reply
+                      </button>
                     ) : (
                       '—'
                     )}
@@ -165,6 +199,8 @@ export function InstantlyLeadsTable({
           </table>
         </div>
       )}
+
+      {openReply && <ReplyModal lead={openReply} onClose={() => setOpenReply(null)} />}
     </div>
   );
 }
