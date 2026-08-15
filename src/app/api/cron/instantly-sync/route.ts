@@ -76,6 +76,95 @@ function extractPhone(text: string): string | null {
   return plausible[0] ?? null;
 }
 
+async function runInBatches<T>(items: T[], size: number, fn: (item: T) => Promise<void>) {
+  for (let i = 0; i < items.length; i += size) {
+    await Promise.all(items.slice(i, i + size).map(fn));
+  }
+}
+
+// Supabase caps a query at 1000 rows unless you page through it with .range() — this
+// table has 12,000+ rows, so an unpaginated select here would silently truncate and
+// make already-synced leads look new on every future run.
+async function fetchAllRows<T>(
+  query: (from: number, to: number) => PromiseLike<{ data: T[] | null }>
+): Promise<T[]> {
+  const pageSize = 1000;
+  const all: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data } = await query(from, from + pageSize - 1);
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
+async function syncLeads(
+  supabase: ReturnType<typeof createAdminClient>,
+  apiKey: string,
+  campaigns: InstantlyCampaign[]
+) {
+  const existingRows = await fetchAllRows<{ email: string; campaign: string | null }>((from, to) =>
+    supabase.from('instantly_leads').select('email, campaign').range(from, to)
+  );
+  const existing = new Set(existingRows.map((r) => `${r.email}|||${r.campaign}`));
+
+  let inserted = 0;
+  const skippedCampaigns: string[] = [];
+
+  // Campaigns are independent, so scan several at once — with 27+ campaigns and no way
+  // to ask Instantly for "what's new since X" (checked, doesn't exist), sequential
+  // scanning is what blew past Vercel's time limit in the first place.
+  await runInBatches(campaigns, 6, async (campaign) => {
+    try {
+      let startingAfter: string | null = null;
+      do {
+        const body: Record<string, unknown> = { campaign: campaign.id, limit: 100 };
+        if (startingAfter) body.starting_after = startingAfter;
+
+        const pageRes = await instantlyFetch('/leads/list', apiKey, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const page = (await pageRes.json()) as {
+          items?: InstantlyLead[];
+          next_starting_after?: string | null;
+        };
+
+        const newRows = (page.items ?? [])
+          .filter((lead) => lead.email && !existing.has(`${lead.email}|||${campaign.name}`))
+          .map((lead) => ({
+            campaign: campaign.name,
+            name: [lead.first_name, lead.last_name].filter(Boolean).join(' ') || null,
+            email: lead.email,
+            company: lead.company_name ?? null,
+            job_title: lead.job_title ?? null,
+            phone: lead.phone ?? null,
+            linkedin_url: lead.payload?.linkedIn ?? null,
+            interest_status: interestStatusLabel(lead.lt_interest_status)
+          }));
+
+        if (newRows.length > 0) {
+          const { error } = await supabase.from('instantly_leads').insert(newRows);
+          if (error && error.code !== '23505') throw error;
+          newRows.forEach((r) => existing.add(`${r.email}|||${r.campaign}`));
+          inserted += newRows.length;
+        }
+
+        startingAfter = page.next_starting_after ?? null;
+      } while (startingAfter);
+    } catch (err) {
+      skippedCampaigns.push(campaign.name);
+      console.error(`Skipped campaign "${campaign.name}" after repeated errors:`, err);
+    }
+  });
+
+  return { inserted, skippedCampaigns };
+}
+
 interface InstantlyEmail {
   ue_type: number;
   lead?: string;
@@ -85,8 +174,15 @@ interface InstantlyEmail {
 
 async function syncReplies(supabase: ReturnType<typeof createAdminClient>, apiKey: string) {
   const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000; // only look back 3 days — this runs daily
+
+  const { data: knownReplies } = await supabase
+    .from('instantly_leads')
+    .select('email, last_reply_at')
+    .not('last_reply_at', 'is', null);
+  const lastSeenByEmail = new Map((knownReplies ?? []).map((r) => [r.email, r.last_reply_at as string]));
+
+  const updates: { email: string; reply_text: string; reply_phone: string | null; last_reply_at: string }[] = [];
   let startingAfter: string | null = null;
-  let processed = 0;
   let pages = 0;
 
   do {
@@ -104,27 +200,37 @@ async function syncReplies(supabase: ReturnType<typeof createAdminClient>, apiKe
       }
       if (email.ue_type !== 2 || !email.lead) continue; // 2 = inbound reply from the lead
 
+      const alreadySeen = lastSeenByEmail.get(email.lead);
+      if (alreadySeen && new Date(alreadySeen).getTime() >= new Date(email.timestamp_email).getTime()) continue;
+
       const replyText = email.body?.text?.trim() || (email.body?.html ? stripHtml(email.body.html) : '');
       if (!replyText) continue;
-      const phone = extractPhone(replyText);
 
-      await supabase
-        .from('instantly_leads')
-        .update({
-          reply_text: replyText,
-          reply_phone: phone,
-          needs_cold_call: phone !== null,
-          last_reply_at: email.timestamp_email
-        })
-        .eq('email', email.lead);
-      processed++;
+      updates.push({
+        email: email.lead,
+        reply_text: replyText,
+        reply_phone: extractPhone(replyText),
+        last_reply_at: email.timestamp_email
+      });
     }
 
     startingAfter = hitCutoff ? null : (page.next_starting_after ?? null);
     pages++;
   } while (startingAfter && pages < 10); // hard cap so a bad response can't loop forever
 
-  return processed;
+  await runInBatches(updates, 15, async (u) => {
+    await supabase
+      .from('instantly_leads')
+      .update({
+        reply_text: u.reply_text,
+        reply_phone: u.reply_phone,
+        needs_cold_call: u.reply_phone !== null,
+        last_reply_at: u.last_reply_at
+      })
+      .eq('email', u.email);
+  });
+
+  return updates.length;
 }
 
 export async function GET(request: NextRequest) {
@@ -142,53 +248,7 @@ export async function GET(request: NextRequest) {
   const campaignsRes = await instantlyFetch('/campaigns?limit=100', apiKey);
   const { items: campaigns = [] } = (await campaignsRes.json()) as { items: InstantlyCampaign[] };
 
-  let inserted = 0;
-  const skippedCampaigns: string[] = [];
-
-  for (const campaign of campaigns) {
-    try {
-      let startingAfter: string | null = null;
-      do {
-        const body: Record<string, unknown> = { campaign: campaign.id, limit: 100 };
-        if (startingAfter) body.starting_after = startingAfter;
-
-        const pageRes = await instantlyFetch('/leads/list', apiKey, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        const page = (await pageRes.json()) as {
-          items?: InstantlyLead[];
-          next_starting_after?: string | null;
-        };
-
-        for (const lead of page.items ?? []) {
-          if (!lead.email) continue;
-
-          const { error } = await supabase.from('instantly_leads').insert({
-            campaign: campaign.name,
-            name: [lead.first_name, lead.last_name].filter(Boolean).join(' ') || null,
-            email: lead.email,
-            company: lead.company_name ?? null,
-            job_title: lead.job_title ?? null,
-            phone: lead.phone ?? null,
-            linkedin_url: lead.payload?.linkedIn ?? null,
-            interest_status: interestStatusLabel(lead.lt_interest_status)
-          });
-
-          // Unique violation (23505) means this lead's already synced — expected, not an error.
-          // Skip so we never clobber a rep's assigned_rep/sales_status/notes edits.
-          if (!error) inserted++;
-          else if (error.code !== '23505') throw error;
-        }
-
-        startingAfter = page.next_starting_after ?? null;
-      } while (startingAfter);
-    } catch (err) {
-      skippedCampaigns.push(campaign.name);
-      console.error(`Skipped campaign "${campaign.name}" after repeated errors:`, err);
-    }
-  }
+  const { inserted, skippedCampaigns } = await syncLeads(supabase, apiKey, campaigns);
 
   let repliesProcessed = 0;
   try {
