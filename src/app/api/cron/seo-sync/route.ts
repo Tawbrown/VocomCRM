@@ -9,6 +9,28 @@ function isoDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+// Google API client errors (gaxios) don't stringify usefully by default — pull out the
+// actual message so failures are diagnosable instead of showing "[object Object]".
+function describeError(err: unknown): string {
+  if (err instanceof Error) {
+    const anyErr = err as Error & { response?: { data?: unknown }; code?: string | number };
+    const responseData = anyErr.response?.data;
+    if (responseData) {
+      try {
+        return `${err.message} — ${JSON.stringify(responseData)}`;
+      } catch {
+        // fall through
+      }
+    }
+    return err.message;
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 async function syncSearchConsole(supabase: ReturnType<typeof createAdminClient>) {
   const siteUrl = process.env.GSC_SITE_URL;
   if (!siteUrl) return { skipped: 'GSC_SITE_URL not set' };
@@ -175,21 +197,21 @@ export async function GET(request: NextRequest) {
     results.searchConsole = await syncSearchConsole(supabase);
   } catch (err) {
     console.error('Search Console sync failed:', err);
-    results.searchConsole = { error: String(err) };
+    results.searchConsole = { error: describeError(err) };
   }
 
   try {
     results.analytics = await syncAnalytics(supabase);
   } catch (err) {
     console.error('Analytics sync failed:', err);
-    results.analytics = { error: String(err) };
+    results.analytics = { error: describeError(err) };
   }
 
   try {
     results.monthlyReport = await maybeGenerateMonthlyReport(supabase);
   } catch (err) {
     console.error('Monthly report generation failed:', err);
-    results.monthlyReport = { error: String(err) };
+    results.monthlyReport = { error: describeError(err) };
   }
 
   return NextResponse.json({ ok: true, ...results });
