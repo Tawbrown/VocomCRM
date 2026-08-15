@@ -3,6 +3,25 @@
 import { useMemo, useState } from 'react';
 import { bucketDaily } from '@/lib/daily-counts';
 
+// A card is only a few hundred px wide — cramming e.g. 365 daily bars into that renders
+// each one at sub-pixel width (invisible), even though the data's genuinely there. Once
+// the series is longer than this, merge consecutive days together so bars stay visible.
+const MAX_BARS = 60;
+
+function resample(series: { date: string; value: number }[]) {
+  if (series.length <= MAX_BARS) return series.map((d) => ({ ...d, label: d.date }));
+  const chunkSize = Math.ceil(series.length / MAX_BARS);
+  const chunks: { date: string; value: number; label: string }[] = [];
+  for (let i = 0; i < series.length; i += chunkSize) {
+    const chunk = series.slice(i, i + chunkSize);
+    const value = chunk.reduce((sum, p) => sum + p.value, 0);
+    const from = chunk[0].date;
+    const to = chunk[chunk.length - 1].date;
+    chunks.push({ date: from, value, label: from === to ? from : `${from} to ${to}` });
+  }
+  return chunks;
+}
+
 const RANGES: { label: string; days: number | null }[] = [
   { label: '1D', days: 1 },
   { label: '7D', days: 7 },
@@ -42,8 +61,9 @@ export function BarTrend({
     return bucketDaily(data, range);
   }, [data, range, custom]);
 
-  const max = Math.max(1, ...series.map((d) => d.value));
   const total = series.reduce((sum, d) => sum + d.value, 0);
+  const displaySeries = useMemo(() => resample(series), [series]);
+  const max = Math.max(1, ...displaySeries.map((d) => d.value));
 
   return (
     <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
@@ -108,10 +128,10 @@ export function BarTrend({
         <p className="text-sm text-neutral-500">No data in this range.</p>
       ) : (
         <div className="flex h-24 items-end gap-0.5">
-          {series.map((d) => (
+          {displaySeries.map((d) => (
             <div
               key={d.date}
-              title={`${d.date}: ${d.value}`}
+              title={`${d.label}: ${d.value}`}
               className={`flex-1 rounded-t ${colorClass}`}
               style={{ height: `${Math.max(2, (d.value / max) * 100)}%` }}
             />

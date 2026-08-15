@@ -31,7 +31,7 @@ function describeError(err: unknown): string {
   }
 }
 
-async function syncSearchConsole(supabase: ReturnType<typeof createAdminClient>) {
+async function syncSearchConsole(supabase: ReturnType<typeof createAdminClient>, days: number) {
   const siteUrl = process.env.GSC_SITE_URL;
   if (!siteUrl) return { skipped: 'GSC_SITE_URL not set' };
 
@@ -39,22 +39,78 @@ async function syncSearchConsole(supabase: ReturnType<typeof createAdminClient>)
   const end = new Date();
   end.setDate(end.getDate() - 3); // GSC data has a ~2-3 day lag
   const start = new Date(end);
-  start.setDate(start.getDate() - 6); // pull a week each run, overlap is fine (upsert)
+  start.setDate(start.getDate() - (days - 1)); // pull a rolling week each run, overlap is fine (upsert)
+
+  // Search Console caps each response at 5000 rows — a backfill (days=480, GSC's own
+  // history limit) can exceed that for a busier site, so page with startRow until short.
+  const pageSize = 5000;
+  let startRow = 0;
+  let totalRows = 0;
+  while (true) {
+    const res = await searchconsole.searchanalytics.query({
+      siteUrl,
+      requestBody: {
+        startDate: isoDate(start),
+        endDate: isoDate(end),
+        dimensions: ['date', 'query', 'page'],
+        rowLimit: pageSize,
+        startRow
+      }
+    });
+
+    const page = res.data.rows ?? [];
+    const rows = page.map((row) => ({
+      date: row.keys?.[0],
+      query: row.keys?.[1],
+      page: row.keys?.[2],
+      clicks: row.clicks ?? 0,
+      impressions: row.impressions ?? 0,
+      ctr: row.ctr ?? 0,
+      position: row.position ?? 0
+    }));
+
+    if (rows.length > 0) {
+      const { error } = await supabase
+        .from('seo_search_queries')
+        .upsert(rows, { onConflict: 'date,query,page' });
+      if (error) throw error;
+      totalRows += rows.length;
+    }
+
+    if (page.length < pageSize) break;
+    startRow += pageSize;
+  }
+
+  return { rows: totalRows };
+}
+
+// Search Console anonymizes/omits rows for rare search terms once results are broken down
+// by individual query — for this site that drops total clicks by ~95% (confirmed against
+// GSC's own UI totals). The per-query table needs that breakdown regardless, but the
+// site-wide trend chart needs real numbers, so this is a separate date-only query with no
+// query dimension to trigger that filtering.
+async function syncSearchConsoleDaily(supabase: ReturnType<typeof createAdminClient>, days: number) {
+  const siteUrl = process.env.GSC_SITE_URL;
+  if (!siteUrl) return { skipped: 'GSC_SITE_URL not set' };
+
+  const searchconsole = await getSearchConsoleClient();
+  const end = new Date();
+  end.setDate(end.getDate() - 3);
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
 
   const res = await searchconsole.searchanalytics.query({
     siteUrl,
     requestBody: {
       startDate: isoDate(start),
       endDate: isoDate(end),
-      dimensions: ['date', 'query', 'page'],
+      dimensions: ['date'],
       rowLimit: 5000
     }
   });
 
   const rows = (res.data.rows ?? []).map((row) => ({
     date: row.keys?.[0],
-    query: row.keys?.[1],
-    page: row.keys?.[2],
     clicks: row.clicks ?? 0,
     impressions: row.impressions ?? 0,
     ctr: row.ctr ?? 0,
@@ -62,16 +118,14 @@ async function syncSearchConsole(supabase: ReturnType<typeof createAdminClient>)
   }));
 
   if (rows.length > 0) {
-    const { error } = await supabase
-      .from('seo_search_queries')
-      .upsert(rows, { onConflict: 'date,query,page' });
+    const { error } = await supabase.from('seo_daily_totals').upsert(rows, { onConflict: 'date' });
     if (error) throw error;
   }
 
   return { rows: rows.length };
 }
 
-async function syncAnalytics(supabase: ReturnType<typeof createAdminClient>) {
+async function syncAnalytics(supabase: ReturnType<typeof createAdminClient>, days: number) {
   const propertyId = process.env.GA4_PROPERTY_ID;
   if (!propertyId) return { skipped: 'GA4_PROPERTY_ID not set' };
 
@@ -79,7 +133,7 @@ async function syncAnalytics(supabase: ReturnType<typeof createAdminClient>) {
   const res = await analyticsdata.properties.runReport({
     property: `properties/${propertyId}`,
     requestBody: {
-      dateRanges: [{ startDate: '8daysAgo', endDate: 'yesterday' }],
+      dateRanges: [{ startDate: `${days}daysAgo`, endDate: 'yesterday' }],
       dimensions: [{ name: 'date' }, { name: 'landingPage' }],
       metrics: [{ name: 'sessions' }, { name: 'activeUsers' }, { name: 'conversions' }]
     }
@@ -193,15 +247,27 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const results: Record<string, unknown> = {};
 
+  // Normal daily runs pull a short rolling window (below). Pass ?days=480 once to backfill
+  // full history — GSC and GA4 both cap lookback around 16 months.
+  const daysParam = parseInt(request.nextUrl.searchParams.get('days') ?? '', 10);
+  const overrideDays = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(daysParam, 480) : null;
+
   try {
-    results.searchConsole = await syncSearchConsole(supabase);
+    results.searchConsole = await syncSearchConsole(supabase, overrideDays ?? 7);
   } catch (err) {
     console.error('Search Console sync failed:', err);
     results.searchConsole = { error: describeError(err) };
   }
 
   try {
-    results.analytics = await syncAnalytics(supabase);
+    results.searchConsoleDaily = await syncSearchConsoleDaily(supabase, overrideDays ?? 7);
+  } catch (err) {
+    console.error('Search Console daily totals sync failed:', err);
+    results.searchConsoleDaily = { error: describeError(err) };
+  }
+
+  try {
+    results.analytics = await syncAnalytics(supabase, overrideDays ?? 8);
   } catch (err) {
     console.error('Analytics sync failed:', err);
     results.analytics = { error: describeError(err) };

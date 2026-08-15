@@ -133,6 +133,9 @@ export function InstantlyLeadsTable({
   const router = useRouter();
   const pathname = usePathname();
 
+  const hasActiveFilters =
+    filter !== 'All' || campaignStatus !== 'All' || sequenceStatus !== 'All' || coldCallOnly || notStartedOnly;
+
   const baseParams = new URLSearchParams();
   if (filter !== 'All') baseParams.set('filter', filter);
   if (campaignStatus !== 'All') baseParams.set('campaignStatus', campaignStatus);
@@ -261,6 +264,13 @@ export function InstantlyLeadsTable({
           📞 Needs Cold Call ({coldCallCount})
         </Link>
       </div>
+
+      {hasActiveFilters && (
+        <p className="mb-3 text-sm text-neutral-600">
+          <span className="font-semibold text-neutral-900">{totalCount.toLocaleString()}</span> of{' '}
+          {summary.total.toLocaleString()} leads match these filters
+        </p>
+      )}
 
       {leads.length === 0 ? (
         <p className="text-sm text-neutral-500">No leads match this filter.</p>

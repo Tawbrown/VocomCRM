@@ -1,6 +1,6 @@
 import { BarTrend } from '@/components/bar-trend';
 import { createClient } from '@/lib/supabase/server';
-import type { SeoLandingPage, SeoMonthlyReport, SeoSearchQuery } from '@/lib/types';
+import type { SeoDailyTotal, SeoLandingPage, SeoMonthlyReport, SeoSearchQuery } from '@/lib/types';
 import { QueriesTable } from './queries-table';
 
 function aggregateQueries(rows: SeoSearchQuery[]) {
@@ -43,8 +43,9 @@ export default async function SeoPage() {
   since.setDate(since.getDate() - 400); // covers the 1Y toggle option, however much history exists
   const sinceIso = since.toISOString().slice(0, 10);
 
-  const [{ data: queryRows }, { data: landingRows }, { data: reports }] = await Promise.all([
+  const [{ data: queryRows }, { data: dailyTotals }, { data: landingRows }, { data: reports }] = await Promise.all([
     supabase.from('seo_search_queries').select('*').gte('date', sinceIso).returns<SeoSearchQuery[]>(),
+    supabase.from('seo_daily_totals').select('*').gte('date', sinceIso).returns<SeoDailyTotal[]>(),
     supabase
       .from('seo_landing_pages')
       .select('*')
@@ -62,8 +63,11 @@ export default async function SeoPage() {
   const aggregated = aggregateQueries(queryRows ?? []);
   const latestReport = reports?.[0] ?? null;
 
-  const clicksByDay = (queryRows ?? []).map((r) => ({ date: r.date, value: r.clicks }));
-  const impressionsByDay = (queryRows ?? []).map((r) => ({ date: r.date, value: r.impressions }));
+  // Site-wide totals come from a date-only query, not the per-query breakdown below —
+  // Search Console anonymizes/omits rows for rare search terms once broken down by query,
+  // which otherwise undercounts clicks by ~95% on a low-traffic site like this one.
+  const clicksByDay = (dailyTotals ?? []).map((r) => ({ date: r.date, value: r.clicks }));
+  const impressionsByDay = (dailyTotals ?? []).map((r) => ({ date: r.date, value: r.impressions }));
   const sessionsByDay = (landingRows ?? []).map((r) => ({ date: r.date, value: r.sessions }));
 
   const topPages = Object.entries(
@@ -82,7 +86,10 @@ export default async function SeoPage() {
         Search Console + Analytics data for your own site — not competitor comparison
         (neither API exposes that; would need a paid tool like Ahrefs/SEMrush on top of
         this). &quot;Opportunities&quot; are queries with real impressions that aren&apos;t
-        ranking well yet.
+        ranking well yet. Note: the per-query table below will show lower click totals than
+        the chart above — Google itself hides which exact search term led to a click once
+        that term is rare enough to be identifying, so the site-wide total is always the
+        more accurate number.
       </p>
 
       {latestReport ? (

@@ -119,6 +119,15 @@ export interface SeoSearchQuery {
   position: number;
 }
 
+export interface SeoDailyTotal {
+  id: string;
+  date: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
+
 export interface SeoLandingPage {
   id: string;
   date: string;
