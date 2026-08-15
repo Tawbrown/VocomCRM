@@ -23,9 +23,43 @@ function interestStatusLabel(code: number | string | null | undefined): string {
   return INTEREST_LABELS[String(code)] ?? String(code);
 }
 
+// Campaign-level: is the campaign itself still sending, paused, or finished.
+const CAMPAIGN_STATUS_LABELS: Record<string, string> = {
+  '0': 'Draft',
+  '1': 'Active',
+  '2': 'Paused',
+  '3': 'Completed',
+  '4': 'Running Subsequences',
+  '-1': 'Accounts Unhealthy',
+  '-2': 'Bounce Protect',
+  '-99': 'Account Suspended'
+};
+
+function campaignStatusLabel(code: number | string | null | undefined): string | null {
+  if (code === null || code === undefined) return null;
+  return CAMPAIGN_STATUS_LABELS[String(code)] ?? String(code);
+}
+
+// Lead-level: where this specific lead is in that campaign's send sequence — distinct
+// from lt_interest_status, which is about whether they've replied and how.
+const SEQUENCE_STATUS_LABELS: Record<string, string> = {
+  '1': 'Active',
+  '2': 'Paused',
+  '3': 'Completed',
+  '-1': 'Bounced',
+  '-2': 'Unsubscribed',
+  '-3': 'Skipped'
+};
+
+function sequenceStatusLabel(code: number | string | null | undefined): string | null {
+  if (code === null || code === undefined) return null;
+  return SEQUENCE_STATUS_LABELS[String(code)] ?? String(code);
+}
+
 interface InstantlyCampaign {
   id: string;
   name: string;
+  status?: number;
 }
 
 interface InstantlyLeadPayload {
@@ -40,6 +74,8 @@ interface InstantlyLead {
   job_title?: string;
   phone?: string;
   lt_interest_status?: number | string | null;
+  status?: number | string | null;
+  timestamp_last_contact?: string | null;
   payload?: InstantlyLeadPayload;
 }
 
@@ -104,17 +140,28 @@ async function fetchAllRows<T>(
   return all;
 }
 
+interface ExistingLeadRow {
+  email: string;
+  campaign: string | null;
+  sequence_status: string | null;
+  last_contacted_at: string | null;
+}
+
 async function syncLeads(
   supabase: ReturnType<typeof createAdminClient>,
   apiKey: string,
   campaigns: InstantlyCampaign[]
 ) {
-  const existingRows = await fetchAllRows<{ email: string; campaign: string | null }>((from, to) =>
-    supabase.from('instantly_leads').select('email, campaign').range(from, to)
+  const existingRows = await fetchAllRows<ExistingLeadRow>((from, to) =>
+    supabase
+      .from('instantly_leads')
+      .select('email, campaign, sequence_status, last_contacted_at')
+      .range(from, to)
   );
-  const existing = new Set(existingRows.map((r) => `${r.email}|||${r.campaign}`));
+  const existingByKey = new Map(existingRows.map((r) => [`${r.email}|||${r.campaign}`, r]));
 
   let inserted = 0;
+  let progressUpdated = 0;
   const skippedCampaigns: string[] = [];
 
   // Campaigns are independent, so scan several at once — with 27+ campaigns and no way
@@ -122,6 +169,14 @@ async function syncLeads(
   // scanning is what blew past Vercel's time limit in the first place.
   await runInBatches(campaigns, 6, async (campaign) => {
     try {
+      const campaignStatus = campaignStatusLabel(campaign.status);
+      const progressUpdates: {
+        email: string;
+        sequence_status: string | null;
+        last_contacted_at: string | null;
+      }[] = [];
+      let sawAnyLead = false;
+
       let startingAfter: string | null = null;
       do {
         const body: Record<string, unknown> = { campaign: campaign.id, limit: 100 };
@@ -136,9 +191,11 @@ async function syncLeads(
           items?: InstantlyLead[];
           next_starting_after?: string | null;
         };
+        const items = page.items ?? [];
+        if (items.length > 0) sawAnyLead = true;
 
-        const newRows = (page.items ?? [])
-          .filter((lead) => lead.email && !existing.has(`${lead.email}|||${campaign.name}`))
+        const newRows = items
+          .filter((lead) => lead.email && !existingByKey.has(`${lead.email}|||${campaign.name}`))
           .map((lead) => ({
             campaign: campaign.name,
             name: [lead.first_name, lead.last_name].filter(Boolean).join(' ') || null,
@@ -147,25 +204,72 @@ async function syncLeads(
             job_title: lead.job_title ?? null,
             phone: lead.phone ?? null,
             linkedin_url: lead.payload?.linkedIn ?? null,
-            interest_status: interestStatusLabel(lead.lt_interest_status)
+            interest_status: interestStatusLabel(lead.lt_interest_status),
+            campaign_status: campaignStatus,
+            sequence_status: sequenceStatusLabel(lead.status),
+            last_contacted_at: lead.timestamp_last_contact ?? null
           }));
 
         if (newRows.length > 0) {
           const { error } = await supabase.from('instantly_leads').insert(newRows);
           if (error && error.code !== '23505') throw error;
-          newRows.forEach((r) => existing.add(`${r.email}|||${r.campaign}`));
+          newRows.forEach((r) =>
+            existingByKey.set(`${r.email}|||${r.campaign}`, {
+              email: r.email,
+              campaign: r.campaign,
+              sequence_status: r.sequence_status,
+              last_contacted_at: r.last_contacted_at
+            })
+          );
           inserted += newRows.length;
+        }
+
+        // Leads already in the table still need their sequence progress refreshed —
+        // a lead synced weeks ago as "Active" may have finished the sequence since.
+        for (const lead of items) {
+          if (!lead.email) continue;
+          const existingRow = existingByKey.get(`${lead.email}|||${campaign.name}`);
+          if (!existingRow) continue; // just inserted above, already current
+          const newSequenceStatus = sequenceStatusLabel(lead.status);
+          const newLastContacted = lead.timestamp_last_contact ?? null;
+          if (
+            existingRow.sequence_status !== newSequenceStatus ||
+            existingRow.last_contacted_at !== newLastContacted
+          ) {
+            progressUpdates.push({
+              email: lead.email,
+              sequence_status: newSequenceStatus,
+              last_contacted_at: newLastContacted
+            });
+            existingRow.sequence_status = newSequenceStatus;
+            existingRow.last_contacted_at = newLastContacted;
+          }
         }
 
         startingAfter = page.next_starting_after ?? null;
       } while (startingAfter);
+
+      // One bulk update covers every lead in this campaign — cheaper than a per-lead
+      // write, and campaign status (active/paused/completed) is the same for all of them.
+      if (sawAnyLead) {
+        await supabase.from('instantly_leads').update({ campaign_status: campaignStatus }).eq('campaign', campaign.name);
+      }
+
+      await runInBatches(progressUpdates, 15, async (u) => {
+        await supabase
+          .from('instantly_leads')
+          .update({ sequence_status: u.sequence_status, last_contacted_at: u.last_contacted_at })
+          .eq('email', u.email)
+          .eq('campaign', campaign.name);
+      });
+      progressUpdated += progressUpdates.length;
     } catch (err) {
       skippedCampaigns.push(campaign.name);
       console.error(`Skipped campaign "${campaign.name}" after repeated errors:`, err);
     }
   });
 
-  return { inserted, skippedCampaigns };
+  return { inserted, progressUpdated, skippedCampaigns };
 }
 
 interface InstantlyEmail {
@@ -251,7 +355,7 @@ export async function GET(request: NextRequest) {
   const campaignsRes = await instantlyFetch('/campaigns?limit=100', apiKey);
   const { items: campaigns = [] } = (await campaignsRes.json()) as { items: InstantlyCampaign[] };
 
-  const { inserted, skippedCampaigns } = await syncLeads(supabase, apiKey, campaigns);
+  const { inserted, progressUpdated, skippedCampaigns } = await syncLeads(supabase, apiKey, campaigns);
 
   let repliesProcessed = 0;
   try {
@@ -260,5 +364,5 @@ export async function GET(request: NextRequest) {
     console.error('Reply sync failed:', err);
   }
 
-  return NextResponse.json({ ok: true, inserted, skippedCampaigns, repliesProcessed });
+  return NextResponse.json({ ok: true, inserted, progressUpdated, skippedCampaigns, repliesProcessed });
 }

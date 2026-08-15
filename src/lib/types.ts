@@ -61,6 +61,9 @@ export interface InstantlyLead {
   reply_phone: string | null;
   needs_cold_call: boolean;
   last_reply_at: string | null;
+  campaign_status: string | null;
+  sequence_status: string | null;
+  last_contacted_at: string | null;
 }
 
 export interface LinkedInActivity {

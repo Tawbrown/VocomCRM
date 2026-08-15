@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { deleteInstantlyLead, updateInstantlyLead } from '@/app/actions';
 import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import type { InstantlyLead, Rep } from '@/lib/types';
-import { INTEREST_FILTERS } from './constants';
+import { CAMPAIGN_STATUS_FILTERS, INTEREST_FILTERS, SEQUENCE_STATUS_FILTERS } from './constants';
 
 const INTEREST_COLORS: Record<string, string> = {
   Interested: 'bg-green-100 text-green-700',
@@ -21,6 +22,38 @@ const INTEREST_COLORS: Record<string, string> = {
   'No Show': 'bg-red-100 text-red-700',
   'No Reply Yet': 'bg-neutral-100 text-neutral-500'
 };
+
+const CAMPAIGN_STATUS_COLORS: Record<string, string> = {
+  Active: 'bg-green-100 text-green-700',
+  Paused: 'bg-amber-100 text-amber-700',
+  Completed: 'bg-neutral-100 text-neutral-500',
+  'Running Subsequences': 'bg-blue-100 text-blue-700',
+  Draft: 'bg-neutral-100 text-neutral-400',
+  'Accounts Unhealthy': 'bg-red-100 text-red-700',
+  'Bounce Protect': 'bg-red-100 text-red-700',
+  'Account Suspended': 'bg-red-100 text-red-700'
+};
+
+// Combines sequence_status with whether the lead has been emailed yet into one label —
+// "yet to start / in the middle / completed the flow" is what reps actually want to see
+// per lead, not the raw Instantly enum.
+function sequenceStage(lead: InstantlyLead): { label: string; colorClass: string } {
+  switch (lead.sequence_status) {
+    case 'Bounced':
+      return { label: 'Bounced', colorClass: 'bg-red-100 text-red-700' };
+    case 'Unsubscribed':
+      return { label: 'Unsubscribed', colorClass: 'bg-red-100 text-red-700' };
+    case 'Skipped':
+      return { label: 'Skipped', colorClass: 'bg-neutral-100 text-neutral-400' };
+    case 'Paused':
+      return { label: 'Paused', colorClass: 'bg-amber-100 text-amber-700' };
+    case 'Completed':
+      return { label: 'Sequence complete', colorClass: 'bg-neutral-100 text-neutral-500' };
+    default:
+      if (!lead.last_contacted_at) return { label: 'Not started', colorClass: 'bg-neutral-100 text-neutral-400' };
+      return { label: 'In progress', colorClass: 'bg-blue-100 text-blue-700' };
+  }
+}
 
 function ReplyModal({ lead, onClose }: { lead: InstantlyLead; onClose: () => void }) {
   return (
@@ -55,53 +88,160 @@ function ReplyModal({ lead, onClose }: { lead: InstantlyLead; onClose: () => voi
   );
 }
 
+interface Summary {
+  total: number;
+  activeCampaigns: number;
+  completedCampaigns: number;
+  notStarted: number;
+  awaitingReply: number;
+  replied: number;
+  sequenceCompleteNoReply: number;
+}
+
 export function InstantlyLeadsTable({
   leads,
   reps,
   statuses,
   filter,
+  campaignStatus,
+  sequenceStatus,
   coldCallOnly,
+  notStartedOnly,
   page,
   pageSize,
   totalCount,
   coldCallCount,
-  filterCounts
+  filterCounts,
+  summary
 }: {
   leads: InstantlyLead[];
   reps: Rep[];
   statuses: string[];
   filter: string;
+  campaignStatus: string;
+  sequenceStatus: string;
   coldCallOnly: boolean;
+  notStartedOnly: boolean;
   page: number;
   pageSize: number;
   totalCount: number;
   coldCallCount: number;
   filterCounts: Record<string, number>;
+  summary: Summary;
 }) {
   const [openReply, setOpenReply] = useState<InstantlyLead | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const interestHref = (f: string) => `?filter=${encodeURIComponent(f)}`;
-  const coldCallHref = coldCallOnly ? '?filter=All' : '?filter=All&coldCall=1';
-
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const baseParams = new URLSearchParams();
   if (filter !== 'All') baseParams.set('filter', filter);
+  if (campaignStatus !== 'All') baseParams.set('campaignStatus', campaignStatus);
+  if (sequenceStatus !== 'All') baseParams.set('sequenceStatus', sequenceStatus);
   if (coldCallOnly) baseParams.set('coldCall', '1');
+  if (notStartedOnly) baseParams.set('notStarted', '1');
+
+  const interestHref = (f: string) => {
+    const params = new URLSearchParams(baseParams);
+    if (f === 'All') params.delete('filter');
+    else params.set('filter', f);
+    return `?${params.toString()}`;
+  };
+  const coldCallHref = (() => {
+    const params = new URLSearchParams(baseParams);
+    if (coldCallOnly) params.delete('coldCall');
+    else params.set('coldCall', '1');
+    return `?${params.toString()}`;
+  })();
+  const notStartedHref = (() => {
+    const params = new URLSearchParams(baseParams);
+    if (notStartedOnly) params.delete('notStarted');
+    else params.set('notStarted', '1');
+    return `?${params.toString()}`;
+  })();
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const pageHref = (p: number) => {
     const params = new URLSearchParams(baseParams);
     params.set('page', String(p));
     return `?${params.toString()}`;
   };
 
+  function navigateWith(key: string, value: string) {
+    const params = new URLSearchParams(baseParams);
+    if (value === 'All') params.delete(key);
+    else params.set(key, value);
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  const tiles: { label: string; count: number }[] = [
+    { label: 'Total Leads', count: summary.total },
+    { label: 'In Active Campaigns', count: summary.activeCampaigns },
+    { label: 'In Completed Campaigns', count: summary.completedCampaigns },
+    { label: 'Not Started Yet', count: summary.notStarted },
+    { label: 'Awaiting Reply', count: summary.awaitingReply },
+    { label: 'Sequence Done, No Reply', count: summary.sequenceCompleteNoReply },
+    { label: 'Replied', count: summary.replied }
+  ];
+
   return (
     <div>
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        {tiles.map((tile) => (
+          <div key={tile.label} className="rounded-lg border border-neutral-200 bg-white p-3 shadow-sm">
+            <p className="text-xs text-neutral-500">{tile.label}</p>
+            <p className="mt-1 text-xl font-semibold text-neutral-900">{tile.count}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+          Campaign
+          <select
+            value={campaignStatus}
+            onChange={(e) => navigateWith('campaignStatus', e.target.value)}
+            className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700"
+          >
+            {CAMPAIGN_STATUS_FILTERS.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+          Sequence
+          <select
+            value={sequenceStatus}
+            onChange={(e) => navigateWith('sequenceStatus', e.target.value)}
+            className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700"
+          >
+            {SEQUENCE_STATUS_FILTERS.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Link
+          href={notStartedHref}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${
+            notStartedOnly
+              ? 'bg-neutral-900 text-white'
+              : 'bg-white text-neutral-600 ring-1 ring-inset ring-neutral-200 hover:bg-neutral-100'
+          }`}
+        >
+          Not Started Yet ({summary.notStarted})
+        </Link>
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {INTEREST_FILTERS.map((f) => (
           <Link
             key={f}
             href={interestHref(f)}
             className={`rounded-full px-3 py-1 text-xs font-medium ${
-              filter === f && !coldCallOnly
+              filter === f
                 ? 'bg-neutral-900 text-white'
                 : 'bg-white text-neutral-600 ring-1 ring-inset ring-neutral-200 hover:bg-neutral-100'
             }`}
@@ -135,6 +275,7 @@ export function InstantlyLeadsTable({
                 <th className="px-4 py-3 font-medium">Phone</th>
                 <th className="px-4 py-3 font-medium">Reply</th>
                 <th className="px-4 py-3 font-medium">Campaign</th>
+                <th className="px-4 py-3 font-medium">Sequence</th>
                 <th className="px-4 py-3 font-medium">Interest</th>
                 <th className="px-4 py-3 font-medium">Assigned Rep</th>
                 <th className="px-4 py-3 font-medium">Sales Status</th>
@@ -184,8 +325,29 @@ export function InstantlyLeadsTable({
                       '—'
                     )}
                   </td>
-                  <td className="max-w-[160px] truncate px-4 py-3 text-neutral-500" title={lead.campaign ?? ''}>
-                    {lead.campaign || '—'}
+                  <td className="max-w-[160px] px-4 py-3 text-neutral-500">
+                    <p className="truncate" title={lead.campaign ?? ''}>
+                      {lead.campaign || '—'}
+                    </p>
+                    {lead.campaign_status && (
+                      <span
+                        className={`mt-1 inline-block rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                          CAMPAIGN_STATUS_COLORS[lead.campaign_status] ?? 'bg-neutral-100 text-neutral-500'
+                        }`}
+                      >
+                        {lead.campaign_status}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const stage = sequenceStage(lead);
+                      return (
+                        <span className={`rounded-md px-2 py-1 text-xs font-medium ${stage.colorClass}`}>
+                          {stage.label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     <span
