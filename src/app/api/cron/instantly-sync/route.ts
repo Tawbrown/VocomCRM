@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export const maxDuration = 60;
+// Fluid Compute is on for this project, which allows up to 300s on Hobby — this ran in
+// ~33s locally, but Vercel's network path to Instantly/Supabase may differ, so leaving
+// real headroom rather than cutting it close at 60s.
+export const maxDuration = 240;
 
 const INTEREST_LABELS: Record<string, string> = {
   '0': 'Out of Office',
