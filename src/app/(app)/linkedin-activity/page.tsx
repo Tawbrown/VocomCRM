@@ -1,7 +1,17 @@
 import { addLinkedInActivity } from '@/app/actions';
+import { BreakdownBars } from '@/components/breakdown-bars';
 import { createClient } from '@/lib/supabase/server';
 import { ACTIVITY_TYPES, DEAL_STATUSES, type LinkedInActivity, type Rep } from '@/lib/types';
 import { LinkedInActivityTable } from './table';
+
+const DEAL_COLORS: Record<string, string> = {
+  Prospecting: 'bg-neutral-500',
+  Connected: 'bg-blue-500',
+  Conversation: 'bg-amber-500',
+  Meeting: 'bg-purple-500',
+  Won: 'bg-green-500',
+  Lost: 'bg-red-400'
+};
 
 export default async function LinkedInActivityPage() {
   const supabase = await createClient();
@@ -15,6 +25,19 @@ export default async function LinkedInActivityPage() {
     supabase.from('reps').select('*').order('name').returns<Rep[]>()
   ]);
 
+  const allActivity = activity ?? [];
+  const activityTypeBreakdown = ACTIVITY_TYPES.map((type) => ({
+    label: type,
+    count: allActivity.filter((a) => a.activity === type).length
+  }));
+  const dealBreakdown = DEAL_STATUSES.map((status) => ({
+    label: status,
+    count: allActivity.filter((a) => a.deal_status === status).length,
+    colorClass: DEAL_COLORS[status]
+  }));
+  const sentCount = allActivity.filter((a) => a.connection_sent).length;
+  const acceptedCount = allActivity.filter((a) => a.connection_accepted).length;
+
   return (
     <div>
       <h1 className="mb-1 text-xl font-semibold text-neutral-900">LinkedIn Activity</h1>
@@ -22,6 +45,21 @@ export default async function LinkedInActivityPage() {
         LinkedIn doesn&apos;t expose followers/visits/likes via API, so this is logged manually —
         check LinkedIn&apos;s own notifications, then add what&apos;s new here.
       </p>
+
+      {allActivity.length > 0 && (
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <BreakdownBars title="Activity type" items={activityTypeBreakdown} />
+          <BreakdownBars title="Deal status" items={dealBreakdown} />
+          <BreakdownBars
+            title="Connection funnel"
+            items={[
+              { label: 'Logged', count: allActivity.length, colorClass: 'bg-neutral-500' },
+              { label: 'Sent', count: sentCount, colorClass: 'bg-blue-500' },
+              { label: 'Accepted', count: acceptedCount, colorClass: 'bg-green-500' }
+            ]}
+          />
+        </div>
+      )}
 
       <form
         action={addLinkedInActivity}
@@ -70,7 +108,7 @@ export default async function LinkedInActivityPage() {
         </button>
       </form>
 
-      <LinkedInActivityTable activity={activity ?? []} reps={reps ?? []} dealStatuses={DEAL_STATUSES} />
+      <LinkedInActivityTable activity={allActivity} reps={reps ?? []} dealStatuses={DEAL_STATUSES} />
     </div>
   );
 }

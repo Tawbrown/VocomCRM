@@ -1,6 +1,4 @@
-'use client';
-
-import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import type { MasterContact } from '@/lib/types';
 
 const SOURCE_COLORS: Record<string, string> = {
@@ -9,32 +7,54 @@ const SOURCE_COLORS: Record<string, string> = {
   'LinkedIn Activity': 'bg-sky-100 text-sky-700'
 };
 
-export function ContactsTable({ contacts }: { contacts: MasterContact[] }) {
-  const [query, setQuery] = useState('');
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return contacts;
-    return contacts.filter((c) =>
-      [c.name, c.email, c.company, c.phone, c.job_title, c.source].some((field) =>
-        field?.toLowerCase().includes(q)
-      )
-    );
-  }, [contacts, query]);
+export function ContactsTable({
+  contacts,
+  totalCount,
+  page,
+  pageSize,
+  query
+}: {
+  contacts: MasterContact[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  query: string;
+}) {
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const pageHref = (p: number) => {
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    params.set('page', String(p));
+    return `?${params.toString()}`;
+  };
 
   return (
     <div>
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search by name, email, company, phone..."
-        className="mb-4 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm sm:w-80"
-      />
-      <p className="mb-2 text-xs text-neutral-400">
-        {filtered.length} of {contacts.length} contacts
-      </p>
+      <form method="GET" className="mb-4 flex gap-2">
+        <input
+          type="text"
+          name="q"
+          defaultValue={query}
+          placeholder="Search by name, email, company, phone..."
+          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm sm:w-80"
+        />
+        <button
+          type="submit"
+          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+        >
+          Search
+        </button>
+        {query && (
+          <Link
+            href="?page=1"
+            className="rounded-md px-4 py-2 text-sm text-neutral-500 ring-1 ring-inset ring-neutral-200 hover:bg-neutral-100"
+          >
+            Clear
+          </Link>
+        )}
+      </form>
 
-      {filtered.length === 0 ? (
+      {contacts.length === 0 ? (
         <p className="text-sm text-neutral-500">No contacts match.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm">
@@ -50,7 +70,7 @@ export function ContactsTable({ contacts }: { contacts: MasterContact[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {filtered.slice(0, 500).map((c, i) => (
+              {contacts.map((c, i) => (
                 <tr key={i}>
                   <td className="px-4 py-3 text-neutral-900">
                     {c.linkedin_url ? (
@@ -78,11 +98,34 @@ export function ContactsTable({ contacts }: { contacts: MasterContact[] }) {
               ))}
             </tbody>
           </table>
-          {filtered.length > 500 && (
-            <p className="border-t border-neutral-100 px-4 py-2 text-xs text-neutral-400">
-              Showing first 500 of {filtered.length} — narrow your search to see more.
-            </p>
-          )}
+
+          <div className="flex items-center justify-between border-t border-neutral-100 px-4 py-3 text-sm text-neutral-500">
+            <span>
+              {totalCount === 0
+                ? '0 results'
+                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalCount)} of ${totalCount.toLocaleString()}`}
+            </span>
+            <div className="flex gap-2">
+              <Link
+                href={pageHref(Math.max(1, page - 1))}
+                aria-disabled={page <= 1}
+                className={`rounded-md px-3 py-1 ring-1 ring-inset ring-neutral-200 ${
+                  page <= 1 ? 'pointer-events-none text-neutral-300' : 'hover:bg-neutral-100'
+                }`}
+              >
+                Previous
+              </Link>
+              <Link
+                href={pageHref(Math.min(totalPages, page + 1))}
+                aria-disabled={page >= totalPages}
+                className={`rounded-md px-3 py-1 ring-1 ring-inset ring-neutral-200 ${
+                  page >= totalPages ? 'pointer-events-none text-neutral-300' : 'hover:bg-neutral-100'
+                }`}
+              >
+                Next
+              </Link>
+            </div>
+          </div>
         </div>
       )}
     </div>

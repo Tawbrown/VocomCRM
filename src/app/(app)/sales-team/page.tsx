@@ -1,10 +1,30 @@
 import { addRep } from '@/app/actions';
+import { BreakdownBars } from '@/components/breakdown-bars';
 import { createClient } from '@/lib/supabase/server';
 import type { Rep } from '@/lib/types';
 
 export default async function SalesTeamPage() {
   const supabase = await createClient();
   const { data: reps } = await supabase.from('reps').select('*').order('name').returns<Rep[]>();
+  const allReps = reps ?? [];
+
+  const [{ data: websiteAssignments }, { data: instantlyAssignments }, { data: linkedinAssignments }] =
+    await Promise.all([
+      supabase.from('website_leads').select('assigned_rep_id').not('assigned_rep_id', 'is', null),
+      supabase.from('instantly_leads').select('assigned_rep_id').not('assigned_rep_id', 'is', null),
+      supabase.from('linkedin_activity').select('assigned_rep_id').not('assigned_rep_id', 'is', null)
+    ]);
+
+  const allAssignments = [
+    ...(websiteAssignments ?? []),
+    ...(instantlyAssignments ?? []),
+    ...(linkedinAssignments ?? [])
+  ];
+
+  const workload = allReps.map((rep) => ({
+    label: rep.name,
+    count: allAssignments.filter((a) => a.assigned_rep_id === rep.id).length
+  }));
 
   return (
     <div>
@@ -29,8 +49,14 @@ export default async function SalesTeamPage() {
         </button>
       </form>
 
+      {allReps.length > 0 && (
+        <div className="mb-6 max-w-md">
+          <BreakdownBars title="Leads assigned per rep (all sources)" items={workload} />
+        </div>
+      )}
+
       <ul className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white shadow-sm">
-        {(reps ?? []).map((rep) => (
+        {allReps.map((rep) => (
           <li key={rep.id} className="px-4 py-3 text-sm text-neutral-900">
             {rep.name}
           </li>
