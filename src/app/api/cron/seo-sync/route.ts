@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getAnalyticsDataClient, getSearchConsoleClient } from '@/lib/google';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -96,8 +96,8 @@ async function maybeGenerateMonthlyReport(supabase: ReturnType<typeof createAdmi
     .maybeSingle();
   if (existing) return { skipped: 'already generated for this month' };
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { skipped: 'ANTHROPIC_API_KEY not set' };
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return { skipped: 'GEMINI_API_KEY not set' };
 
   // Opportunity queries: decent visibility (impressions) but weak clicks or ranking —
   // the classic "close but not converting" signal worth writing/optimizing content for.
@@ -126,14 +126,13 @@ async function maybeGenerateMonthlyReport(supabase: ReturnType<typeof createAdmi
     .sort((a, b) => b.impressions - a.impressions)
     .slice(0, 30);
 
-  const anthropic = new Anthropic({ apiKey });
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5',
-    max_tokens: 2000,
-    messages: [
-      {
-        role: 'user',
-        content: `You're advising Vocom, a fiber optic cable supplier, on SEO content strategy. Here is the last 90 days of Google Search Console query data — queries getting search impressions but ranking outside the top few spots (position 8+) or with weak click-through:
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    generationConfig: { responseMimeType: 'application/json' }
+  });
+  const result = await model.generateContent(
+    `You're advising Vocom, a fiber optic cable supplier, on SEO content strategy. Here is the last 90 days of Google Search Console query data — queries getting search impressions but ranking outside the top few spots (position 8+) or with weak click-through:
 
 ${JSON.stringify(opportunities, null, 2)}
 
@@ -142,16 +141,14 @@ Write a concise monthly content report with two parts:
 2. A list of 5-8 specific blog post title suggestions, each tied to a real query above, with a one-line reason.
 
 Respond as JSON only, matching this shape: {"summary": string, "suggestions": [{"title": string, "reason": string, "based_on_query": string}]}`
-      }
-    ]
-  });
+  );
 
-  const textBlock = message.content.find((b) => b.type === 'text');
+  const text = result.response.text();
   let parsed: { summary: string; suggestions: unknown[] };
   try {
-    parsed = JSON.parse(textBlock?.type === 'text' ? textBlock.text : '{}');
+    parsed = JSON.parse(text);
   } catch {
-    parsed = { summary: textBlock?.type === 'text' ? textBlock.text : 'Could not parse report.', suggestions: [] };
+    parsed = { summary: text || 'Could not parse report.', suggestions: [] };
   }
 
   const { error } = await supabase.from('seo_monthly_reports').insert({
