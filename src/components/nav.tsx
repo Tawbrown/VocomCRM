@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/', label: 'Dashboard' },
   { href: '/website-leads', label: 'Website Leads' },
   { href: '/instantly-leads', label: 'Instantly Leads' },
+  { href: '/deals', label: 'Deals' },
   { href: '/linkedin-activity', label: 'LinkedIn Activity' },
   { href: '/linkedin-marketing', label: 'LinkedIn Marketing' },
   { href: '/seo', label: 'SEO' },

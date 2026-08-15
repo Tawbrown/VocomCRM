@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import type { DealStatus, LeadStatus, LinkedInActivityType } from '@/lib/types';
+import type { DealPipelineStatus, DealStatus, LeadStatus, LinkedInActivityType } from '@/lib/types';
 
 export async function updateWebsiteLead(
   id: string,
@@ -84,6 +84,48 @@ export async function deleteImportedContact(id: string) {
   const supabase = await createClient();
   await supabase.from('imported_contacts').delete().eq('id', id);
   revalidatePath('/contacts');
+}
+
+export async function addDeal(formData: FormData) {
+  const supabase = await createClient();
+  const customerName = (formData.get('customer_name') as string)?.trim();
+  if (!customerName) return;
+
+  await supabase.from('deals').insert({
+    customer_name: customerName,
+    company: (formData.get('company') as string) || null,
+    pic: (formData.get('pic') as string) || null,
+    product: (formData.get('product') as string) || null,
+    value: Number(formData.get('value')) || 0,
+    start_date: (formData.get('start_date') as string) || new Date().toISOString().slice(0, 10),
+    expected_close_date: (formData.get('expected_close_date') as string) || null,
+    notes: (formData.get('notes') as string) || null
+  });
+  revalidatePath('/deals');
+}
+
+export async function updateDeal(
+  id: string,
+  fields: Partial<{
+    assigned_rep_id: string | null;
+    status: DealPipelineStatus;
+    value: number;
+    expected_close_date: string | null;
+    notes: string;
+  }>
+) {
+  const supabase = await createClient();
+  await supabase
+    .from('deals')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  revalidatePath('/deals');
+}
+
+export async function deleteDeal(id: string) {
+  const supabase = await createClient();
+  await supabase.from('deals').delete().eq('id', id);
+  revalidatePath('/deals');
 }
 
 export async function signOut() {

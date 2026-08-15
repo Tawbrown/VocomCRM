@@ -13,6 +13,15 @@ export const DEAL_STATUSES: DealStatus[] = [
 ];
 export const ACTIVITY_TYPES: LinkedInActivityType[] = ['Follow', 'Visit', 'Like'];
 
+export type DealPipelineStatus = 'Prospecting' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+export const DEAL_PIPELINE_STATUSES: DealPipelineStatus[] = [
+  'Prospecting',
+  'Proposal',
+  'Negotiation',
+  'Won',
+  'Lost'
+];
+
 export interface Rep {
   id: string;
   name: string;
@@ -117,6 +126,22 @@ export interface ContentSuggestion {
   title: string;
   reason: string;
   based_on_query: string;
+}
+
+export interface Deal {
+  id: string;
+  customer_name: string;
+  company: string | null;
+  pic: string | null;
+  product: string | null;
+  value: number;
+  status: DealPipelineStatus;
+  start_date: string;
+  expected_close_date: string | null;
+  assigned_rep_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SeoMonthlyReport {
