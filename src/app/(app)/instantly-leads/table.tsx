@@ -31,13 +31,17 @@ export function InstantlyLeadsTable({
   statuses: string[];
 }) {
   const [filter, setFilter] = useState('All');
+  const [coldCallOnly, setColdCallOnly] = useState(false);
 
-  const filtered =
-    filter === 'All' ? leads : leads.filter((lead) => lead.interest_status === filter);
+  const coldCallCount = leads.filter((lead) => lead.needs_cold_call).length;
+
+  const filtered = leads
+    .filter((lead) => filter === 'All' || lead.interest_status === filter)
+    .filter((lead) => !coldCallOnly || lead.needs_cold_call);
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         {FILTERS.map((f) => (
           <button
             key={f}
@@ -51,6 +55,17 @@ export function InstantlyLeadsTable({
             {f}
           </button>
         ))}
+        <span className="mx-1 h-4 w-px bg-neutral-200" />
+        <button
+          onClick={() => setColdCallOnly((v) => !v)}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${
+            coldCallOnly
+              ? 'bg-red-600 text-white'
+              : 'bg-white text-red-600 ring-1 ring-inset ring-red-200 hover:bg-red-50'
+          }`}
+        >
+          📞 Needs Cold Call ({coldCallCount})
+        </button>
       </div>
 
       {filtered.length === 0 ? (
@@ -64,6 +79,7 @@ export function InstantlyLeadsTable({
                 <th className="px-4 py-3 font-medium">Company</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Phone</th>
+                <th className="px-4 py-3 font-medium">Reply</th>
                 <th className="px-4 py-3 font-medium">Campaign</th>
                 <th className="px-4 py-3 font-medium">Interest</th>
                 <th className="px-4 py-3 font-medium">Assigned Rep</th>
@@ -72,7 +88,7 @@ export function InstantlyLeadsTable({
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {filtered.map((lead) => (
-                <tr key={lead.id}>
+                <tr key={lead.id} className={lead.needs_cold_call ? 'bg-red-50/50' : undefined}>
                   <td className="px-4 py-3 text-neutral-900">
                     {lead.linkedin_url ? (
                       <a
@@ -89,7 +105,30 @@ export function InstantlyLeadsTable({
                   </td>
                   <td className="px-4 py-3 text-neutral-600">{lead.company || '—'}</td>
                   <td className="px-4 py-3 text-neutral-600">{lead.email}</td>
-                  <td className="px-4 py-3 text-neutral-600">{lead.phone || '—'}</td>
+                  <td className="px-4 py-3">
+                    {lead.reply_phone ? (
+                      <span
+                        className="rounded-md bg-red-100 px-2 py-1 font-medium text-red-700"
+                        title="Extracted from their reply — double check against the full text before calling"
+                      >
+                        📞 {lead.reply_phone}
+                      </span>
+                    ) : (
+                      <span className="text-neutral-600">{lead.phone || '—'}</span>
+                    )}
+                  </td>
+                  <td className="max-w-[220px] px-4 py-3 text-neutral-600">
+                    {lead.reply_text ? (
+                      <span
+                        className="block max-w-[220px] truncate"
+                        title={lead.reply_text}
+                      >
+                        {lead.reply_text}
+                      </span>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td className="max-w-[160px] truncate px-4 py-3 text-neutral-500" title={lead.campaign ?? ''}>
                     {lead.campaign || '—'}
                   </td>

@@ -27,28 +27,34 @@ export default async function LinkedInActivityPage() {
         action={addLinkedInActivity}
         className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm"
       >
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-500">Prospect</label>
           <input
             name="prospect"
             required
-            className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
+            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm sm:w-auto"
           />
         </div>
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-500">Company</label>
-          <input name="company" className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm" />
+          <input
+            name="company"
+            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm sm:w-auto"
+          />
         </div>
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-500">LinkedIn URL</label>
           <input
             name="linkedin_url"
-            className="w-56 rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
+            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm sm:w-56"
           />
         </div>
-        <div>
+        <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-500">Activity</label>
-          <select name="activity" className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm">
+          <select
+            name="activity"
+            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm sm:w-auto"
+          >
             {ACTIVITY_TYPES.map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -58,7 +64,7 @@ export default async function LinkedInActivityPage() {
         </div>
         <button
           type="submit"
-          className="rounded-md bg-neutral-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-neutral-700"
+          className="w-full rounded-md bg-neutral-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-neutral-700 sm:w-auto"
         >
           Log activity
         </button>

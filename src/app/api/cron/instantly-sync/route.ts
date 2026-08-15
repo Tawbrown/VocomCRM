@@ -54,6 +54,79 @@ async function instantlyFetch(path: string, apiKey: string, init?: RequestInit) 
   throw new Error('unreachable');
 }
 
+// Loose international phone matcher — heuristic, not a strict validator. Reps should
+// glance at the full reply text rather than trust this blindly on edge cases.
+const PHONE_REGEX =
+  /(?:\+\d{1,3}[-.\s]?)?\(?\d{2,4}\)?(?:[-.\s]\d{2,4}){2,4}(?:\s?(?:ext|x)\.?\s?\d{1,5})?/gi;
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractPhone(text: string): string | null {
+  const matches = text.match(PHONE_REGEX) ?? [];
+  const plausible = matches
+    .map((m) => m.trim())
+    .filter((m) => m.replace(/\D/g, '').length >= 7 && m.replace(/\D/g, '').length <= 15);
+  return plausible[0] ?? null;
+}
+
+interface InstantlyEmail {
+  ue_type: number;
+  lead?: string;
+  timestamp_email: string;
+  body?: { text?: string; html?: string };
+}
+
+async function syncReplies(supabase: ReturnType<typeof createAdminClient>, apiKey: string) {
+  const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000; // only look back 3 days — this runs daily
+  let startingAfter: string | null = null;
+  let processed = 0;
+  let pages = 0;
+
+  do {
+    const qs = new URLSearchParams({ limit: '100' });
+    if (startingAfter) qs.set('starting_after', startingAfter);
+    const res = await instantlyFetch(`/emails?${qs}`, apiKey);
+    const page = (await res.json()) as { items?: InstantlyEmail[]; next_starting_after?: string | null };
+    const items = page.items ?? [];
+
+    let hitCutoff = false;
+    for (const email of items) {
+      if (new Date(email.timestamp_email).getTime() < cutoff) {
+        hitCutoff = true;
+        break;
+      }
+      if (email.ue_type !== 2 || !email.lead) continue; // 2 = inbound reply from the lead
+
+      const replyText = email.body?.text?.trim() || (email.body?.html ? stripHtml(email.body.html) : '');
+      if (!replyText) continue;
+      const phone = extractPhone(replyText);
+
+      await supabase
+        .from('instantly_leads')
+        .update({
+          reply_text: replyText,
+          reply_phone: phone,
+          needs_cold_call: phone !== null,
+          last_reply_at: email.timestamp_email
+        })
+        .eq('email', email.lead);
+      processed++;
+    }
+
+    startingAfter = hitCutoff ? null : (page.next_starting_after ?? null);
+    pages++;
+  } while (startingAfter && pages < 10); // hard cap so a bad response can't loop forever
+
+  return processed;
+}
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -117,5 +190,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, inserted, skippedCampaigns });
+  let repliesProcessed = 0;
+  try {
+    repliesProcessed = await syncReplies(supabase, apiKey);
+  } catch (err) {
+    console.error('Reply sync failed:', err);
+  }
+
+  return NextResponse.json({ ok: true, inserted, skippedCampaigns, repliesProcessed });
 }

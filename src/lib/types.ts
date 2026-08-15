@@ -45,6 +45,10 @@ export interface InstantlyLead {
   assigned_rep_id: string | null;
   sales_status: LeadStatus;
   notes: string | null;
+  reply_text: string | null;
+  reply_phone: string | null;
+  needs_cold_call: boolean;
+  last_reply_at: string | null;
 }
 
 export interface LinkedInActivity {
@@ -74,4 +78,15 @@ export interface LinkedInAudienceStat {
   category: string;
   label: string;
   value: number;
+}
+
+export interface MasterContact {
+  source: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  job_title: string | null;
+  linkedin_url: string | null;
+  touched_at: string | null;
 }
