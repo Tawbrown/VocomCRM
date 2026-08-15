@@ -9,7 +9,7 @@ const INTEREST_LABELS = [
   'Out of Office',
   'Not Interested',
   'Wrong Person',
-  'Uncontacted'
+  'No Reply Yet'
 ];
 
 function buildDailyCounts(dates: string[], days: number) {

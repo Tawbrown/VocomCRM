@@ -8,7 +8,7 @@ const COLORS: Record<string, string> = {
   'Wrong Person': 'bg-red-400',
   Lost: 'bg-red-400',
   'No Show': 'bg-red-400',
-  Uncontacted: 'bg-neutral-300'
+  'No Reply Yet': 'bg-neutral-300'
 };
 
 export function InterestBreakdown({ counts }: { counts: { label: string; count: number }[] }) {

@@ -36,7 +36,7 @@ export function ContactsTable({
           name="q"
           defaultValue={query}
           placeholder="Search by name, email, company, phone..."
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm sm:w-80"
+          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 sm:w-80"
         />
         <button
           type="submit"

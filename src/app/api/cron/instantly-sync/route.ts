@@ -19,7 +19,7 @@ const INTEREST_LABELS: Record<string, string> = {
 };
 
 function interestStatusLabel(code: number | string | null | undefined): string {
-  if (code === null || code === undefined) return 'Uncontacted';
+  if (code === null || code === undefined) return 'No Reply Yet';
   return INTEREST_LABELS[String(code)] ?? String(code);
 }
 

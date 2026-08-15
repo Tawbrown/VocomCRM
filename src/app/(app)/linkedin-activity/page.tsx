@@ -70,28 +70,28 @@ export default async function LinkedInActivityPage() {
           <input
             name="prospect"
             required
-            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm sm:w-auto"
+            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 sm:w-auto"
           />
         </div>
         <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-500">Company</label>
           <input
             name="company"
-            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm sm:w-auto"
+            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 sm:w-auto"
           />
         </div>
         <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-500">LinkedIn URL</label>
           <input
             name="linkedin_url"
-            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm sm:w-56"
+            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 sm:w-56"
           />
         </div>
         <div className="w-full sm:w-auto">
           <label className="mb-1 block text-xs font-medium text-neutral-500">Activity</label>
           <select
             name="activity"
-            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm sm:w-auto"
+            className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 sm:w-auto"
           >
             {ACTIVITY_TYPES.map((type) => (
               <option key={type} value={type}>

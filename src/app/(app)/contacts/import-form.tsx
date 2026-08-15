@@ -37,7 +37,7 @@ export function ImportForm() {
           name="source"
           placeholder="e.g. Hunter, LinkedIn export"
           required
-          className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm sm:w-48"
+          className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 sm:w-48"
         />
       </div>
       <div className="w-full sm:w-auto">

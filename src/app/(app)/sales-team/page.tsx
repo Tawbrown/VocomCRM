@@ -39,7 +39,7 @@ export default async function SalesTeamPage() {
       >
         <div>
           <label className="mb-1 block text-xs font-medium text-neutral-500">Rep name</label>
-          <input name="name" required className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm" />
+          <input name="name" required className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" />
         </div>
         <button
           type="submit"

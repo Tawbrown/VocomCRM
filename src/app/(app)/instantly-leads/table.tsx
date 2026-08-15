@@ -18,7 +18,7 @@ const INTEREST_COLORS: Record<string, string> = {
   'Wrong Person': 'bg-red-100 text-red-700',
   Lost: 'bg-red-100 text-red-700',
   'No Show': 'bg-red-100 text-red-700',
-  Uncontacted: 'bg-neutral-100 text-neutral-500'
+  'No Reply Yet': 'bg-neutral-100 text-neutral-500'
 };
 
 function ReplyModal({ lead, onClose }: { lead: InstantlyLead; onClose: () => void }) {
