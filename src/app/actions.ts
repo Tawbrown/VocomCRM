@@ -56,6 +56,36 @@ export async function addRep(formData: FormData) {
   revalidatePath('/sales-team');
 }
 
+export async function deleteWebsiteLead(id: string) {
+  const supabase = await createClient();
+  await supabase.from('website_leads').delete().eq('id', id);
+  revalidatePath('/website-leads');
+}
+
+export async function deleteInstantlyLead(id: string) {
+  const supabase = await createClient();
+  await supabase.from('instantly_leads').delete().eq('id', id);
+  revalidatePath('/instantly-leads');
+}
+
+export async function deleteLinkedInActivity(id: string) {
+  const supabase = await createClient();
+  await supabase.from('linkedin_activity').delete().eq('id', id);
+  revalidatePath('/linkedin-activity');
+}
+
+export async function deleteRep(id: string) {
+  const supabase = await createClient();
+  await supabase.from('reps').delete().eq('id', id);
+  revalidatePath('/sales-team');
+}
+
+export async function deleteImportedContact(id: string) {
+  const supabase = await createClient();
+  await supabase.from('imported_contacts').delete().eq('id', id);
+  revalidatePath('/contacts');
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

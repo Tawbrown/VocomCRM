@@ -1,7 +1,8 @@
 'use client';
 
 import { useTransition } from 'react';
-import { updateLinkedInActivity } from '@/app/actions';
+import { deleteLinkedInActivity, updateLinkedInActivity } from '@/app/actions';
+import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import type { LinkedInActivity, Rep } from '@/lib/types';
@@ -51,6 +52,7 @@ export function LinkedInActivityTable({
             <th className="px-4 py-3 font-medium">Accepted</th>
             <th className="px-4 py-3 font-medium">Assigned Rep</th>
             <th className="px-4 py-3 font-medium">Deal Status</th>
+            <th className="px-4 py-3 font-medium"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
@@ -101,6 +103,9 @@ export function LinkedInActivityTable({
                     })
                   }
                 />
+              </td>
+              <td className="px-4 py-3">
+                <DeleteButton onDelete={() => deleteLinkedInActivity(row.id)} />
               </td>
             </tr>
           ))}

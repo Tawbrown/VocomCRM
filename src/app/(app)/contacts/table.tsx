@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { deleteImportedContact } from '@/app/actions';
+import { DeleteButton } from '@/components/delete-button';
 import type { MasterContact } from '@/lib/types';
 
 const SOURCE_COLORS: Record<string, string> = {
@@ -67,11 +69,12 @@ export function ContactsTable({
                 <th className="px-4 py-3 font-medium">Company</th>
                 <th className="px-4 py-3 font-medium">Title</th>
                 <th className="px-4 py-3 font-medium">Source</th>
+                <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {contacts.map((c, i) => (
-                <tr key={i}>
+              {contacts.map((c) => (
+                <tr key={c.id}>
                   <td className="px-4 py-3 text-neutral-900">
                     {c.linkedin_url ? (
                       <a href={c.linkedin_url} target="_blank" rel="noreferrer" className="hover:underline">
@@ -93,6 +96,18 @@ export function ContactsTable({
                     >
                       {c.source}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {c.origin === 'imported_contacts' ? (
+                      <DeleteButton onDelete={() => deleteImportedContact(c.id)} />
+                    ) : (
+                      <span
+                        className="text-xs text-neutral-300"
+                        title="Delete this from its own page (Website Leads / Instantly Leads / LinkedIn Activity) — Contacts is a combined view"
+                      >
+                        —
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

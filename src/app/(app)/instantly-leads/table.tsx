@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { updateInstantlyLead } from '@/app/actions';
+import { deleteInstantlyLead, updateInstantlyLead } from '@/app/actions';
+import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import type { InstantlyLead, Rep } from '@/lib/types';
@@ -137,6 +138,7 @@ export function InstantlyLeadsTable({
                 <th className="px-4 py-3 font-medium">Interest</th>
                 <th className="px-4 py-3 font-medium">Assigned Rep</th>
                 <th className="px-4 py-3 font-medium">Sales Status</th>
+                <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -211,6 +213,9 @@ export function InstantlyLeadsTable({
                         })
                       }
                     />
+                  </td>
+                  <td className="px-4 py-3">
+                    <DeleteButton onDelete={() => deleteInstantlyLead(lead.id)} />
                   </td>
                 </tr>
               ))}

@@ -1,5 +1,6 @@
-import { addRep } from '@/app/actions';
+import { addRep, deleteRep } from '@/app/actions';
 import { BreakdownBars } from '@/components/breakdown-bars';
+import { DeleteButton } from '@/components/delete-button';
 import { createClient } from '@/lib/supabase/server';
 import type { Rep } from '@/lib/types';
 
@@ -57,8 +58,12 @@ export default async function SalesTeamPage() {
 
       <ul className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white shadow-sm">
         {allReps.map((rep) => (
-          <li key={rep.id} className="px-4 py-3 text-sm text-neutral-900">
+          <li key={rep.id} className="flex items-center justify-between px-4 py-3 text-sm text-neutral-900">
             {rep.name}
+            <DeleteButton
+              onDelete={() => deleteRep(rep.id)}
+              confirmMessage={`Delete ${rep.name}? Their existing assignments will show as Unassigned.`}
+            />
           </li>
         ))}
       </ul>

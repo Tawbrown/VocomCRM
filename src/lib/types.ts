@@ -81,6 +81,8 @@ export interface LinkedInAudienceStat {
 }
 
 export interface MasterContact {
+  id: string;
+  origin: 'website_leads' | 'instantly_leads' | 'linkedin_activity' | 'imported_contacts';
   source: string;
   name: string | null;
   email: string | null;

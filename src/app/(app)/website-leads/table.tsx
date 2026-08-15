@@ -1,6 +1,7 @@
 'use client';
 
-import { updateWebsiteLead } from '@/app/actions';
+import { deleteWebsiteLead, updateWebsiteLead } from '@/app/actions';
+import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import type { Rep, WebsiteLead } from '@/lib/types';
@@ -30,6 +31,7 @@ export function WebsiteLeadsTable({
             <th className="px-4 py-3 font-medium">Location</th>
             <th className="px-4 py-3 font-medium">Assigned Rep</th>
             <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
@@ -57,6 +59,9 @@ export function WebsiteLeadsTable({
                     updateWebsiteLead(lead.id, { status: status as WebsiteLead['status'] })
                   }
                 />
+              </td>
+              <td className="px-4 py-3">
+                <DeleteButton onDelete={() => deleteWebsiteLead(lead.id)} />
               </td>
             </tr>
           ))}
