@@ -171,6 +171,15 @@ export interface Feedback {
   updated_at: string;
 }
 
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  link: string | null;
+  read: boolean;
+  created_at: string;
+}
+
 export interface SeoMonthlyReport {
   id: string;
   month: string;

@@ -7,15 +7,50 @@ import type {
   DealStatus,
   FeedbackStatus,
   LeadStatus,
-  LinkedInActivityType
+  LinkedInActivityType,
+  Notification
 } from '@/lib/types';
+
+async function repName(supabase: Awaited<ReturnType<typeof createClient>>, repId: string) {
+  const { data } = await supabase.from('reps').select('name').eq('id', repId).maybeSingle();
+  return data?.name ?? 'Someone';
+}
+
+async function notifyAssignment(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  repId: string,
+  entityLabel: string,
+  recordLabel: string,
+  link: string
+) {
+  const rep = await repName(supabase, repId);
+  await supabase.from('notifications').insert({
+    type: 'assignment',
+    title: `${rep} was assigned to ${entityLabel}: ${recordLabel}`,
+    link
+  });
+}
 
 export async function updateWebsiteLead(
   id: string,
   fields: Partial<{ assigned_rep_id: string | null; status: LeadStatus; notes: string; contacted_date: string | null }>
 ) {
   const supabase = await createClient();
-  await supabase.from('website_leads').update(fields).eq('id', id);
+  const { data: updated } = await supabase
+    .from('website_leads')
+    .update(fields)
+    .eq('id', id)
+    .select('name, company')
+    .maybeSingle();
+  if (fields.assigned_rep_id) {
+    await notifyAssignment(
+      supabase,
+      fields.assigned_rep_id,
+      'website lead',
+      updated?.name || updated?.company || 'a lead',
+      '/website-leads'
+    );
+  }
   revalidatePath('/website-leads');
 }
 
@@ -24,7 +59,21 @@ export async function updateInstantlyLead(
   fields: Partial<{ assigned_rep_id: string | null; sales_status: LeadStatus; notes: string }>
 ) {
   const supabase = await createClient();
-  await supabase.from('instantly_leads').update(fields).eq('id', id);
+  const { data: updated } = await supabase
+    .from('instantly_leads')
+    .update(fields)
+    .eq('id', id)
+    .select('name, company')
+    .maybeSingle();
+  if (fields.assigned_rep_id) {
+    await notifyAssignment(
+      supabase,
+      fields.assigned_rep_id,
+      'Instantly lead',
+      updated?.name || updated?.company || 'a lead',
+      '/instantly-leads'
+    );
+  }
   revalidatePath('/instantly-leads');
 }
 
@@ -39,7 +88,21 @@ export async function updateLinkedInActivity(
   }>
 ) {
   const supabase = await createClient();
-  await supabase.from('linkedin_activity').update(fields).eq('id', id);
+  const { data: updated } = await supabase
+    .from('linkedin_activity')
+    .update(fields)
+    .eq('id', id)
+    .select('prospect, company')
+    .maybeSingle();
+  if (fields.assigned_rep_id) {
+    await notifyAssignment(
+      supabase,
+      fields.assigned_rep_id,
+      'LinkedIn activity',
+      updated?.prospect || updated?.company || 'a contact',
+      '/linkedin-activity'
+    );
+  }
   revalidatePath('/linkedin-activity');
 }
 
@@ -121,10 +184,21 @@ export async function updateDeal(
   }>
 ) {
   const supabase = await createClient();
-  await supabase
+  const { data: updated } = await supabase
     .from('deals')
     .update({ ...fields, updated_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .select('customer_name, company')
+    .maybeSingle();
+  if (fields.assigned_rep_id) {
+    await notifyAssignment(
+      supabase,
+      fields.assigned_rep_id,
+      'deal',
+      updated?.customer_name || updated?.company || 'a deal',
+      '/deals'
+    );
+  }
   revalidatePath('/deals');
 }
 
@@ -162,4 +236,20 @@ export async function deleteFeedback(id: string) {
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+}
+
+export async function getRecentNotifications() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('notifications')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(30)
+    .returns<Notification[]>();
+  return data ?? [];
+}
+
+export async function markNotificationsRead() {
+  const supabase = await createClient();
+  await supabase.from('notifications').update({ read: true }).eq('read', false);
 }

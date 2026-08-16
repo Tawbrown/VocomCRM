@@ -326,7 +326,7 @@ async function syncReplies(supabase: ReturnType<typeof createAdminClient>, apiKe
   } while (startingAfter && pages < 10); // hard cap so a bad response can't loop forever
 
   await runInBatches(updates, 15, async (u) => {
-    await supabase
+    const { data: updated } = await supabase
       .from('instantly_leads')
       .update({
         reply_text: u.reply_text,
@@ -334,7 +334,15 @@ async function syncReplies(supabase: ReturnType<typeof createAdminClient>, apiKe
         needs_cold_call: u.reply_phone !== null,
         last_reply_at: u.last_reply_at
       })
-      .eq('email', u.email);
+      .eq('email', u.email)
+      .select('name, company')
+      .maybeSingle();
+
+    await supabase.from('notifications').insert({
+      type: 'instantly_reply',
+      title: `New Instantly reply from ${updated?.name || updated?.company || u.email}`,
+      link: '/instantly-leads'
+    });
   });
 
   return updates.length;

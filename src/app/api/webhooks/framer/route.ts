@@ -60,11 +60,15 @@ export async function POST(request: NextRequest) {
     return null;
   };
 
+  const name = field(['Name', 'name']);
+  const email = field(['Email', 'email']);
+  const company = field(['Company', 'company']);
+
   const supabase = createAdminClient();
   const { error } = await supabase.from('website_leads').insert({
-    name: field(['Name', 'name']),
-    email: field(['Email', 'email']),
-    company: field(['Company', 'company']),
+    name,
+    email,
+    company,
     location: field(['Location', 'location']),
     company_size: field(['Company Size', 'company_size']),
     use_case: field(['Use Case', 'use_case']),
@@ -75,6 +79,12 @@ export async function POST(request: NextRequest) {
     console.error('Failed to insert website lead:', error);
     return NextResponse.json({ error: 'insert failed' }, { status: 500 });
   }
+
+  await supabase.from('notifications').insert({
+    type: 'website_lead',
+    title: `New website lead: ${name || email || 'Unknown'}${company ? ` (${company})` : ''}`,
+    link: '/website-leads'
+  });
 
   return NextResponse.json({ ok: true });
 }
