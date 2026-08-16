@@ -18,6 +18,38 @@ const LINKS = [
   { href: '/feedback', label: 'Feedback' }
 ];
 
+function VocomMark() {
+  return (
+    <span className="flex flex-col items-center gap-[3px]">
+      {[10, 14, 18].map((w, i) => (
+        <span key={i} className="block h-[3px] rounded-full bg-vocom" style={{ width: w }} />
+      ))}
+    </span>
+  );
+}
+
+function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return (
+    <>
+      {LINKS.map((link) => {
+        const active = pathname === link.href;
+        return (
+          <Link
+            key={link.href}
+            href={link.href}
+            onClick={onNavigate}
+            className={`block rounded-md px-3 py-2 text-sm font-medium transition ${
+              active ? 'bg-vocom text-white' : 'text-neutral-600 hover:bg-vocom/8 hover:text-vocom'
+            }`}
+          >
+            {link.label}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
+
 export function Nav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -30,36 +62,17 @@ export function Nav() {
   }
 
   return (
-    <header className="border-b border-neutral-200 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-6">
-          <span className="text-sm font-semibold text-neutral-900">Vocom CRM</span>
-          <nav className="hidden md:flex md:gap-1">
-            {LINKS.map((link) => {
-              const active = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`rounded-md px-3 py-1.5 text-sm ${
-                    active ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:bg-neutral-100'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
+    <>
+      {/* Mobile top bar */}
+      <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3 md:hidden">
+        <div className="flex items-center gap-2">
+          <VocomMark />
+          <span className="text-sm font-bold tracking-wide text-vocom">VOCOM CRM</span>
         </div>
-
-        <button onClick={handleSignOut} className="hidden text-sm text-neutral-500 hover:text-neutral-900 md:block">
-          Sign out
-        </button>
-
         <button
           onClick={() => setMenuOpen((open) => !open)}
           aria-label="Toggle menu"
-          className="flex h-9 w-9 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100 md:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100"
         >
           {menuOpen ? (
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -71,25 +84,11 @@ export function Nav() {
             </svg>
           )}
         </button>
-      </div>
+      </header>
 
       {menuOpen && (
-        <nav className="border-t border-neutral-200 px-4 py-2 md:hidden">
-          {LINKS.map((link) => {
-            const active = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMenuOpen(false)}
-                className={`block rounded-md px-3 py-2 text-sm ${
-                  active ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:bg-neutral-100'
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+        <nav className="space-y-0.5 border-b border-neutral-200 bg-white px-3 py-2 md:hidden">
+          <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
           <button
             onClick={handleSignOut}
             className="mt-1 block w-full rounded-md px-3 py-2 text-left text-sm text-neutral-500 hover:bg-neutral-100"
@@ -98,6 +97,25 @@ export function Nav() {
           </button>
         </nav>
       )}
-    </header>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:flex-col md:border-r md:border-neutral-200 md:bg-white">
+        <div className="flex items-center gap-2 px-5 py-6">
+          <VocomMark />
+          <span className="text-base font-bold tracking-wide text-vocom">VOCOM CRM</span>
+        </div>
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3">
+          <NavLinks pathname={pathname} />
+        </nav>
+        <div className="border-t border-neutral-200 px-3 py-4">
+          <button
+            onClick={handleSignOut}
+            className="block w-full rounded-md px-3 py-2 text-left text-sm text-neutral-500 hover:bg-neutral-100"
+          >
+            Sign out
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

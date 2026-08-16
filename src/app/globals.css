@@ -10,6 +10,11 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Vocom brand — sampled from vocom.ai (logo, headline links, primary CTAs) */
+  --color-vocom: #7a1230;
+  --color-vocom-dark: #64142a;
+  --color-vocom-light: #f6c2da;
 }
 
 @media (prefers-color-scheme: dark) {

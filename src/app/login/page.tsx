@@ -39,7 +39,7 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-xl border border-neutral-200 bg-white p-8 shadow-sm"
       >
-        <h1 className="mb-1 text-xl font-semibold text-neutral-900">Vocom CRM</h1>
+        <h1 className="mb-1 text-xl font-bold tracking-wide text-vocom">VOCOM CRM</h1>
         <p className="mb-6 text-sm text-neutral-500">Sign in to continue</p>
 
         <label className="mb-1 block text-sm font-medium text-neutral-700">Email</label>
@@ -65,7 +65,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
+          className="w-full rounded-md bg-vocom px-3 py-2 text-sm font-medium text-white hover:bg-vocom-dark disabled:opacity-50"
         >
           {loading ? 'Signing in...' : 'Sign in'}
         </button>
