@@ -28,7 +28,8 @@ export function WebsiteLeadsTable({
             <th className="px-4 py-3 font-medium">Name</th>
             <th className="px-4 py-3 font-medium">Email</th>
             <th className="px-4 py-3 font-medium">Company</th>
-            <th className="px-4 py-3 font-medium">Location</th>
+            <th className="px-4 py-3 font-medium">Company Size</th>
+            <th className="px-4 py-3 font-medium">Use Case</th>
             <th className="px-4 py-3 font-medium">Assigned Rep</th>
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium"></th>
@@ -43,7 +44,8 @@ export function WebsiteLeadsTable({
               <td className="px-4 py-3 text-neutral-900">{lead.name || '—'}</td>
               <td className="px-4 py-3 text-neutral-600">{lead.email || '—'}</td>
               <td className="px-4 py-3 text-neutral-600">{lead.company || '—'}</td>
-              <td className="px-4 py-3 text-neutral-600">{lead.location || '—'}</td>
+              <td className="px-4 py-3 text-neutral-600">{lead.company_size || '—'}</td>
+              <td className="px-4 py-3 text-neutral-600">{lead.use_case || '—'}</td>
               <td className="px-4 py-3">
                 <RepSelect
                   reps={reps}

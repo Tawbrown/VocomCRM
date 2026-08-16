@@ -37,6 +37,8 @@ export interface WebsiteLead {
   email: string | null;
   company: string | null;
   location: string | null;
+  company_size: string | null;
+  use_case: string | null;
   assigned_rep_id: string | null;
   status: LeadStatus;
   contacted_date: string | null;

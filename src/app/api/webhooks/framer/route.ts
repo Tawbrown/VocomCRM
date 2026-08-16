@@ -44,9 +44,17 @@ export async function POST(request: NextRequest) {
     // Framer always sends JSON, but don't crash on a malformed body — store what we can.
   }
 
+  // Framer field labels sometimes carry stray whitespace into the submitted key (seen in
+  // production: "Company " with a trailing space), which breaks an exact-match lookup —
+  // match on trimmed keys instead so label edits in Framer don't silently stop working.
+  const trimmed: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    trimmed[key.trim()] = value;
+  }
+
   const field = (keys: string[]) => {
     for (const key of keys) {
-      const value = data[key];
+      const value = trimmed[key];
       if (typeof value === 'string' && value.trim()) return value;
     }
     return null;
@@ -58,6 +66,8 @@ export async function POST(request: NextRequest) {
     email: field(['Email', 'email']),
     company: field(['Company', 'company']),
     location: field(['Location', 'location']),
+    company_size: field(['Company Size', 'company_size']),
+    use_case: field(['Use Case', 'use_case']),
     raw_payload: data
   });
 
