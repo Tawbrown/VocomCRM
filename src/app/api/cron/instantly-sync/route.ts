@@ -107,12 +107,37 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+// Out-of-office auto-replies often mention a return date like "09.09.2026", which the
+// loose phone regex above also matches (all-dot separators, 4-digit tail) — filter those
+// back out rather than flagging every OOO reply as "needs cold call".
+const DATE_LIKE = /^\d{1,2}\.\d{1,2}\.\d{2,4}$/;
+
 function extractPhone(text: string): string | null {
   const matches = text.match(PHONE_REGEX) ?? [];
   const plausible = matches
     .map((m) => m.trim())
-    .filter((m) => m.replace(/\D/g, '').length >= 7 && m.replace(/\D/g, '').length <= 15);
+    .filter((m) => m.replace(/\D/g, '').length >= 7 && m.replace(/\D/g, '').length <= 15)
+    .filter((m) => !DATE_LIKE.test(m));
   return plausible[0] ?? null;
+}
+
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+
+// Replies sometimes redirect to a colleague ("reach out to X instead") or a personal
+// address — worth capturing. Filters out the lead's own email and anything on one of our
+// own sending domains (those just come from quoted thread history / signatures).
+function extractAlternativeEmails(text: string, ownEmail: string): string | null {
+  const matches = text.match(EMAIL_REGEX) ?? [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const m of matches) {
+    const lower = m.toLowerCase();
+    if (lower === ownEmail.toLowerCase() || lower.includes('vocom')) continue;
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    result.push(m);
+  }
+  return result.length > 0 ? result.join(', ') : null;
 }
 
 async function runInBatches<T>(items: T[], size: number, fn: (item: T) => Promise<void>) {
@@ -288,7 +313,13 @@ async function syncReplies(supabase: ReturnType<typeof createAdminClient>, apiKe
     .not('last_reply_at', 'is', null);
   const lastSeenByEmail = new Map((knownReplies ?? []).map((r) => [r.email, r.last_reply_at as string]));
 
-  const updates: { email: string; reply_text: string; reply_phone: string | null; last_reply_at: string }[] = [];
+  const updates: {
+    email: string;
+    reply_text: string;
+    reply_phone: string | null;
+    alternative_email: string | null;
+    last_reply_at: string;
+  }[] = [];
   let startingAfter: string | null = null;
   let pages = 0;
 
@@ -317,6 +348,7 @@ async function syncReplies(supabase: ReturnType<typeof createAdminClient>, apiKe
         email: email.lead,
         reply_text: replyText,
         reply_phone: extractPhone(replyText),
+        alternative_email: extractAlternativeEmails(replyText, email.lead),
         last_reply_at: email.timestamp_email
       });
     }
@@ -331,17 +363,19 @@ async function syncReplies(supabase: ReturnType<typeof createAdminClient>, apiKe
       .update({
         reply_text: u.reply_text,
         reply_phone: u.reply_phone,
+        alternative_email: u.alternative_email,
         needs_cold_call: u.reply_phone !== null,
         last_reply_at: u.last_reply_at
       })
       .eq('email', u.email)
-      .select('name, company')
+      .select('id, name, company')
       .maybeSingle();
 
     await supabase.from('notifications').insert({
       type: 'instantly_reply',
       title: `New Instantly reply from ${updated?.name || updated?.company || u.email}`,
-      link: '/instantly-leads'
+      link: '/instantly-leads',
+      related_id: updated?.id ?? null
     });
   });
 

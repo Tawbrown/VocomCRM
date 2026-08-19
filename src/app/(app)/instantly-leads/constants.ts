@@ -1,4 +1,12 @@
-export const INTEREST_FILTERS = ['All', 'Interested', 'Out of Office', 'Meeting Booked', 'No Reply Yet'];
+export const INTEREST_FILTERS = [
+  'All',
+  'Interested',
+  'Out of Office',
+  'Meeting Booked',
+  'Not Interested',
+  'Wrong Person',
+  'No Reply Yet'
+];
 
 // Campaign-level: is the campaign itself still sending, paused, or finished.
 export const CAMPAIGN_STATUS_FILTERS = ['All', 'Active', 'Paused', 'Completed', 'Running Subsequences'];

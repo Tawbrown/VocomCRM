@@ -21,13 +21,15 @@ async function notifyAssignment(
   repId: string,
   entityLabel: string,
   recordLabel: string,
-  link: string
+  link: string,
+  relatedId: string
 ) {
   const rep = await repName(supabase, repId);
   await supabase.from('notifications').insert({
     type: 'assignment',
     title: `${rep} was assigned to ${entityLabel}: ${recordLabel}`,
-    link
+    link,
+    related_id: relatedId
   });
 }
 
@@ -48,7 +50,8 @@ export async function updateWebsiteLead(
       fields.assigned_rep_id,
       'website lead',
       updated?.name || updated?.company || 'a lead',
-      '/website-leads'
+      '/website-leads',
+      id
     );
   }
   revalidatePath('/website-leads');
@@ -71,7 +74,8 @@ export async function updateInstantlyLead(
       fields.assigned_rep_id,
       'Instantly lead',
       updated?.name || updated?.company || 'a lead',
-      '/instantly-leads'
+      '/instantly-leads',
+      id
     );
   }
   revalidatePath('/instantly-leads');
@@ -100,7 +104,8 @@ export async function updateLinkedInActivity(
       fields.assigned_rep_id,
       'LinkedIn activity',
       updated?.prospect || updated?.company || 'a contact',
-      '/linkedin-activity'
+      '/linkedin-activity',
+      id
     );
   }
   revalidatePath('/linkedin-activity');
@@ -196,7 +201,8 @@ export async function updateDeal(
       fields.assigned_rep_id,
       'deal',
       updated?.customer_name || updated?.company || 'a deal',
-      '/deals'
+      '/deals',
+      id
     );
   }
   revalidatePath('/deals');
@@ -252,4 +258,14 @@ export async function getRecentNotifications() {
 export async function markNotificationsRead() {
   const supabase = await createClient();
   await supabase.from('notifications').update({ read: true }).eq('read', false);
+}
+
+export async function deleteNotification(id: string) {
+  const supabase = await createClient();
+  await supabase.from('notifications').delete().eq('id', id);
+}
+
+export async function clearAllNotifications() {
+  const supabase = await createClient();
+  await supabase.from('notifications').delete().not('id', 'is', null);
 }

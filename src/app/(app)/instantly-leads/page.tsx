@@ -14,7 +14,9 @@ export default async function InstantlyLeadsPage({
     campaignStatus?: string;
     sequenceStatus?: string;
     notStarted?: string;
+    sort?: string;
     page?: string;
+    id?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -29,17 +31,29 @@ export default async function InstantlyLeadsPage({
       : 'All';
   const coldCallOnly = params.coldCall === '1';
   const notStartedOnly = params.notStarted === '1';
+  const sort = params.sort === 'active' ? 'active' : 'synced';
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
+  // Coming from a notification — show just that one lead, ignoring every other filter,
+  // since it could otherwise be buried on a different page/sort/filter combination.
+  const highlightId = params.id || null;
 
   const supabase = await createClient();
 
   let query = supabase.from('instantly_leads').select('*', { count: 'exact' });
-  if (filter !== 'All') query = query.eq('interest_status', filter);
-  if (campaignStatus !== 'All') query = query.eq('campaign_status', campaignStatus);
-  if (sequenceStatus !== 'All') query = query.eq('sequence_status', sequenceStatus);
-  if (coldCallOnly) query = query.eq('needs_cold_call', true);
-  if (notStartedOnly) query = query.is('last_contacted_at', null);
-  query = query.order('synced_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  if (highlightId) {
+    query = query.eq('id', highlightId);
+  } else {
+    if (filter !== 'All') query = query.eq('interest_status', filter);
+    if (campaignStatus !== 'All') query = query.eq('campaign_status', campaignStatus);
+    if (sequenceStatus !== 'All') query = query.eq('sequence_status', sequenceStatus);
+    if (coldCallOnly) query = query.eq('needs_cold_call', true);
+    if (notStartedOnly) query = query.is('last_contacted_at', null);
+    query =
+      sort === 'active'
+        ? query.order('last_reply_at', { ascending: false, nullsFirst: false })
+        : query.order('synced_at', { ascending: false });
+    query = query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  }
 
   const [
     { data: leads, count },
@@ -110,6 +124,8 @@ export default async function InstantlyLeadsPage({
         sequenceStatus={sequenceStatus}
         coldCallOnly={coldCallOnly}
         notStartedOnly={notStartedOnly}
+        sort={sort}
+        highlightId={highlightId}
         page={page}
         pageSize={PAGE_SIZE}
         totalCount={count ?? 0}

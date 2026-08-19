@@ -82,6 +82,11 @@ function ReplyModal({ lead, onClose }: { lead: InstantlyLead; onClose: () => voi
             📞 {lead.reply_phone} — extracted from the reply below, double check it&apos;s correct
           </p>
         )}
+        {lead.alternative_email && (
+          <p className="mb-3 rounded-md bg-amber-100 px-2 py-1 text-sm font-medium text-amber-700">
+            ✉️ {lead.alternative_email} — other contact email(s) mentioned in the reply
+          </p>
+        )}
         <p className="whitespace-pre-wrap text-sm text-neutral-700">{lead.reply_text}</p>
       </div>
     </div>
@@ -107,6 +112,8 @@ export function InstantlyLeadsTable({
   sequenceStatus,
   coldCallOnly,
   notStartedOnly,
+  sort,
+  highlightId,
   page,
   pageSize,
   totalCount,
@@ -122,6 +129,8 @@ export function InstantlyLeadsTable({
   sequenceStatus: string;
   coldCallOnly: boolean;
   notStartedOnly: boolean;
+  sort: string;
+  highlightId: string | null;
   page: number;
   pageSize: number;
   totalCount: number;
@@ -142,6 +151,7 @@ export function InstantlyLeadsTable({
   if (sequenceStatus !== 'All') baseParams.set('sequenceStatus', sequenceStatus);
   if (coldCallOnly) baseParams.set('coldCall', '1');
   if (notStartedOnly) baseParams.set('notStarted', '1');
+  if (sort !== 'synced') baseParams.set('sort', sort);
 
   const interestHref = (f: string) => {
     const params = new URLSearchParams(baseParams);
@@ -176,22 +186,41 @@ export function InstantlyLeadsTable({
     router.push(`${pathname}?${params.toString()}`);
   }
 
-  const tiles: { label: string; count: number }[] = [
+  const tiles: { label: string; count: number; hint?: string }[] = [
     { label: 'Total Leads', count: summary.total },
     { label: 'In Active Campaigns', count: summary.activeCampaigns },
     { label: 'In Completed Campaigns', count: summary.completedCampaigns },
     { label: 'Not Started Yet', count: summary.notStarted },
     { label: 'Awaiting Reply', count: summary.awaitingReply },
-    { label: 'Sequence Done, No Reply', count: summary.sequenceCompleteNoReply },
+    {
+      label: 'Sequence Done, No Reply',
+      count: summary.sequenceCompleteNoReply,
+      hint: "A lead's own sequence can finish while their campaign is still Active (other leads in it are still mid-sequence) — so this is often bigger than \"In Completed Campaigns\", which only counts campaigns that are entirely done."
+    },
     { label: 'Replied', count: summary.replied }
   ];
 
   return (
     <div>
+      {highlightId && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-vocom/30 bg-vocom/5 px-4 py-2 text-sm text-neutral-700">
+          <span>Showing 1 lead from a notification.</span>
+          <Link href={pathname} className="font-medium text-vocom hover:underline">
+            View all leads
+          </Link>
+        </div>
+      )}
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         {tiles.map((tile) => (
           <div key={tile.label} className="rounded-lg border border-neutral-200 bg-white p-3 shadow-sm">
-            <p className="text-xs text-neutral-500">{tile.label}</p>
+            <p className="text-xs text-neutral-500">
+              {tile.label}
+              {tile.hint && (
+                <span className="ml-1 cursor-help text-neutral-400" title={tile.hint}>
+                  ⓘ
+                </span>
+              )}
+            </p>
             <p className="mt-1 text-xl font-semibold text-neutral-900">{tile.count}</p>
           </div>
         ))}
@@ -236,6 +265,18 @@ export function InstantlyLeadsTable({
         >
           Not Started Yet ({summary.notStarted})
         </Link>
+        <span className="mx-1 h-4 w-px bg-neutral-200" />
+        <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+          Sort by
+          <select
+            value={sort}
+            onChange={(e) => navigateWith('sort', e.target.value === 'active' ? 'active' : 'synced')}
+            className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700"
+          >
+            <option value="synced">Recently Synced</option>
+            <option value="active">Most Recently Active</option>
+          </select>
+        </label>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -264,6 +305,12 @@ export function InstantlyLeadsTable({
           📞 Needs Cold Call ({coldCallCount})
         </Link>
       </div>
+      <p className="mb-4 text-xs text-neutral-400">
+        &quot;No Reply Yet&quot; is Instantly&apos;s own interest classification and includes
+        both leads still waiting on a reply <em>and</em> leads not yet contacted — use{' '}
+        <strong>Not Started Yet</strong> / <strong>Awaiting Reply</strong> above to tell them
+        apart.
+      </p>
 
       {hasActiveFilters && (
         <p className="mb-3 text-sm text-neutral-600">
@@ -286,6 +333,7 @@ export function InstantlyLeadsTable({
                 <th className="px-4 py-3 font-medium">Reply</th>
                 <th className="px-4 py-3 font-medium">Campaign</th>
                 <th className="px-4 py-3 font-medium">Sequence</th>
+                <th className="px-4 py-3 font-medium">Last Activity</th>
                 <th className="px-4 py-3 font-medium">Interest</th>
                 <th className="px-4 py-3 font-medium">Assigned Rep</th>
                 <th className="px-4 py-3 font-medium">Sales Status</th>
@@ -310,7 +358,18 @@ export function InstantlyLeadsTable({
                     )}
                   </td>
                   <td className="px-4 py-3 text-neutral-600">{lead.company || '—'}</td>
-                  <td className="px-4 py-3 text-neutral-600">{lead.email}</td>
+                  <td className="px-4 py-3 text-neutral-600">
+                    {lead.email}
+                    {lead.alternative_email && (
+                      <button
+                        onClick={() => setOpenReply(lead)}
+                        className="mt-0.5 block text-xs font-medium text-amber-700 hover:underline"
+                        title="Other email(s) mentioned in their reply"
+                      >
+                        ✉️ {lead.alternative_email}
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     {lead.reply_phone ? (
                       <button
@@ -358,6 +417,9 @@ export function InstantlyLeadsTable({
                         </span>
                       );
                     })()}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-neutral-500">
+                    {lead.last_reply_at ? new Date(lead.last_reply_at).toLocaleDateString() : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <span

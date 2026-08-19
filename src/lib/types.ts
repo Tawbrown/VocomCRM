@@ -61,6 +61,7 @@ export interface InstantlyLead {
   notes: string | null;
   reply_text: string | null;
   reply_phone: string | null;
+  alternative_email: string | null;
   needs_cold_call: boolean;
   last_reply_at: string | null;
   campaign_status: string | null;
@@ -176,6 +177,7 @@ export interface Notification {
   type: string;
   title: string;
   link: string | null;
+  related_id: string | null;
   read: boolean;
   created_at: string;
 }

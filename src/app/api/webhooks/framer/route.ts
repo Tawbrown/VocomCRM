@@ -65,15 +65,19 @@ export async function POST(request: NextRequest) {
   const company = field(['Company', 'company']);
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from('website_leads').insert({
-    name,
-    email,
-    company,
-    location: field(['Location', 'location']),
-    company_size: field(['Company Size', 'company_size']),
-    use_case: field(['Use Case', 'use_case']),
-    raw_payload: data
-  });
+  const { data: inserted, error } = await supabase
+    .from('website_leads')
+    .insert({
+      name,
+      email,
+      company,
+      location: field(['Location', 'location']),
+      company_size: field(['Company Size', 'company_size']),
+      use_case: field(['Use Case', 'use_case']),
+      raw_payload: data
+    })
+    .select('id')
+    .single();
 
   if (error) {
     console.error('Failed to insert website lead:', error);
@@ -83,7 +87,8 @@ export async function POST(request: NextRequest) {
   await supabase.from('notifications').insert({
     type: 'website_lead',
     title: `New website lead: ${name || email || 'Unknown'}${company ? ` (${company})` : ''}`,
-    link: '/website-leads'
+    link: '/website-leads',
+    related_id: inserted?.id ?? null
   });
 
   return NextResponse.json({ ok: true });

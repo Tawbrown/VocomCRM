@@ -6,6 +6,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import type { LinkedInActivity, Rep } from '@/lib/types';
+import { useHighlightRow } from '@/lib/use-highlight-row';
 
 function Toggle({
   checked,
@@ -35,6 +36,8 @@ export function LinkedInActivityTable({
   reps: Rep[];
   dealStatuses: string[];
 }) {
+  const { rowProps } = useHighlightRow();
+
   if (activity.length === 0) {
     return <p className="text-sm text-neutral-500">Nothing logged yet — use the form above.</p>;
   }
@@ -57,7 +60,7 @@ export function LinkedInActivityTable({
         </thead>
         <tbody className="divide-y divide-neutral-100">
           {activity.map((row) => (
-            <tr key={row.id}>
+            <tr key={row.id} {...rowProps(row.id)}>
               <td className="whitespace-nowrap px-4 py-3 text-neutral-500">
                 {new Date(row.date_logged).toLocaleDateString()}
               </td>

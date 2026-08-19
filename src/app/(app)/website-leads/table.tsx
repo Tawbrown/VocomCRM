@@ -5,6 +5,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import type { Rep, WebsiteLead } from '@/lib/types';
+import { useHighlightRow } from '@/lib/use-highlight-row';
 
 export function WebsiteLeadsTable({
   leads,
@@ -15,6 +16,8 @@ export function WebsiteLeadsTable({
   reps: Rep[];
   statuses: string[];
 }) {
+  const { rowProps } = useHighlightRow();
+
   if (leads.length === 0) {
     return <p className="text-sm text-neutral-500">No website leads yet.</p>;
   }
@@ -37,7 +40,7 @@ export function WebsiteLeadsTable({
         </thead>
         <tbody className="divide-y divide-neutral-100">
           {leads.map((lead) => (
-            <tr key={lead.id}>
+            <tr key={lead.id} {...rowProps(lead.id)}>
               <td className="whitespace-nowrap px-4 py-3 text-neutral-500">
                 {new Date(lead.created_at).toLocaleDateString()}
               </td>

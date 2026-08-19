@@ -6,6 +6,7 @@ import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import type { Deal, Rep } from '@/lib/types';
+import { useHighlightRow } from '@/lib/use-highlight-row';
 
 function DateInput({ value, onChange }: { value: string | null; onChange: (value: string) => Promise<void> }) {
   const [isPending, startTransition] = useTransition();
@@ -45,6 +46,8 @@ export function DealsTable({
   reps: Rep[];
   statuses: string[];
 }) {
+  const { rowProps } = useHighlightRow();
+
   if (deals.length === 0) return null;
 
   return (
@@ -65,7 +68,7 @@ export function DealsTable({
         </thead>
         <tbody className="divide-y divide-neutral-100">
           {deals.map((deal) => (
-            <tr key={deal.id}>
+            <tr key={deal.id} {...rowProps(deal.id)}>
               <td className="px-4 py-3 text-neutral-900">{deal.customer_name}</td>
               <td className="px-4 py-3 text-neutral-600">{deal.company || '—'}</td>
               <td className="px-4 py-3 text-neutral-600">{deal.pic || '—'}</td>

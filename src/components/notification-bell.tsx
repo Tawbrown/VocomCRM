@@ -2,10 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { getRecentNotifications, markNotificationsRead } from '@/app/actions';
+import { clearAllNotifications, deleteNotification, getRecentNotifications, markNotificationsRead } from '@/app/actions';
 import type { Notification } from '@/lib/types';
 
 const POLL_MS = 30_000;
+
+function notificationHref(n: Notification) {
+  if (!n.link) return '#';
+  if (!n.related_id) return n.link;
+  const separator = n.link.includes('?') ? '&' : '?';
+  return `${n.link}${separator}id=${n.related_id}`;
+}
 
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -47,6 +54,16 @@ export function NotificationBell() {
     }
   }
 
+  async function handleDelete(id: string) {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    await deleteNotification(id);
+  }
+
+  async function handleClearAll() {
+    setNotifications([]);
+    await clearAllNotifications();
+  }
+
   return (
     <div className="relative" ref={containerRef}>
       <button
@@ -70,19 +87,24 @@ export function NotificationBell() {
 
       {open && (
         <div className="absolute right-0 z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-lg">
-          <div className="border-b border-neutral-100 px-4 py-2 text-xs font-medium text-neutral-500">
-            Notifications
+          <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2">
+            <span className="text-xs font-medium text-neutral-500">Notifications</span>
+            {notifications.length > 0 && (
+              <button onClick={handleClearAll} className="text-xs text-neutral-400 hover:text-neutral-700">
+                Clear all
+              </button>
+            )}
           </div>
           {notifications.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-neutral-400">No notifications yet.</p>
           ) : (
             <ul className="divide-y divide-neutral-100">
               {notifications.map((n) => (
-                <li key={n.id}>
+                <li key={n.id} className="group relative flex items-start">
                   <Link
-                    href={n.link ?? '#'}
+                    href={notificationHref(n)}
                     onClick={() => setOpen(false)}
-                    className={`block px-4 py-3 text-sm hover:bg-neutral-50 ${
+                    className={`block flex-1 px-4 py-3 pr-9 text-sm hover:bg-neutral-50 ${
                       n.read ? 'text-neutral-500' : 'font-medium text-neutral-900'
                     }`}
                   >
@@ -91,6 +113,13 @@ export function NotificationBell() {
                       {new Date(n.created_at).toLocaleString()}
                     </span>
                   </Link>
+                  <button
+                    onClick={() => handleDelete(n.id)}
+                    aria-label="Dismiss notification"
+                    className="absolute right-2 top-2.5 flex h-6 w-6 items-center justify-center rounded-full text-neutral-300 opacity-0 hover:bg-neutral-100 hover:text-neutral-600 group-hover:opacity-100"
+                  >
+                    ✕
+                  </button>
                 </li>
               ))}
             </ul>
