@@ -1,8 +1,10 @@
 export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Won' | 'Lost';
+export type LeadSource = 'Website' | 'Offline Event' | 'Referral' | 'Research' | 'Other';
 export type DealStatus = 'Prospecting' | 'Connected' | 'Conversation' | 'Meeting' | 'Won' | 'Lost';
 export type LinkedInActivityType = 'Follow' | 'Visit' | 'Like';
 
 export const LEAD_STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Won', 'Lost'];
+export const LEAD_SOURCES: LeadSource[] = ['Website', 'Offline Event', 'Referral', 'Research', 'Other'];
 export const DEAL_STATUSES: DealStatus[] = [
   'Prospecting',
   'Connected',
@@ -30,7 +32,7 @@ export interface Rep {
   name: string;
 }
 
-export interface WebsiteLead {
+export interface Lead {
   id: string;
   created_at: string;
   name: string | null;
@@ -39,6 +41,7 @@ export interface WebsiteLead {
   location: string | null;
   company_size: string | null;
   use_case: string | null;
+  source: LeadSource;
   assigned_rep_id: string | null;
   status: LeadStatus;
   contacted_date: string | null;

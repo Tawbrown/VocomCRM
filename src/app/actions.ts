@@ -6,6 +6,7 @@ import type {
   DealPipelineStatus,
   DealStatus,
   FeedbackStatus,
+  LeadSource,
   LeadStatus,
   LinkedInActivityType,
   Notification
@@ -33,9 +34,15 @@ async function notifyAssignment(
   });
 }
 
-export async function updateWebsiteLead(
+export async function updateLead(
   id: string,
-  fields: Partial<{ assigned_rep_id: string | null; status: LeadStatus; notes: string; contacted_date: string | null }>
+  fields: Partial<{
+    assigned_rep_id: string | null;
+    status: LeadStatus;
+    source: LeadSource;
+    notes: string;
+    contacted_date: string | null;
+  }>
 ) {
   const supabase = await createClient();
   const { data: updated } = await supabase
@@ -48,13 +55,13 @@ export async function updateWebsiteLead(
     await notifyAssignment(
       supabase,
       fields.assigned_rep_id,
-      'website lead',
+      'lead',
       updated?.name || updated?.company || 'a lead',
-      '/website-leads',
+      '/leads',
       id
     );
   }
-  revalidatePath('/website-leads');
+  revalidatePath('/leads');
 }
 
 export async function updateInstantlyLead(
@@ -130,10 +137,10 @@ export async function addRep(formData: FormData) {
   revalidatePath('/sales-team');
 }
 
-export async function deleteWebsiteLead(id: string) {
+export async function deleteLead(id: string) {
   const supabase = await createClient();
   await supabase.from('website_leads').delete().eq('id', id);
-  revalidatePath('/website-leads');
+  revalidatePath('/leads');
 }
 
 export async function deleteInstantlyLead(id: string) {

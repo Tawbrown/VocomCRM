@@ -7,7 +7,7 @@ import { signOut } from '@/app/actions';
 
 const LINKS = [
   { href: '/', label: 'Dashboard' },
-  { href: '/website-leads', label: 'Website Leads' },
+  { href: '/leads', label: 'Leads' },
   { href: '/instantly-leads', label: 'Instantly Leads' },
   { href: '/deals', label: 'Deals' },
   { href: '/linkedin-activity', label: 'LinkedIn Activity' },

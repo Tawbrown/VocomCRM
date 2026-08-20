@@ -4,7 +4,11 @@ import { DeleteButton } from '@/components/delete-button';
 import type { MasterContact } from '@/lib/types';
 
 const SOURCE_COLORS: Record<string, string> = {
-  'Website Lead': 'bg-blue-100 text-blue-700',
+  Website: 'bg-blue-100 text-blue-700',
+  'Offline Event': 'bg-purple-100 text-purple-700',
+  Referral: 'bg-green-100 text-green-700',
+  Research: 'bg-amber-100 text-amber-700',
+  Other: 'bg-neutral-100 text-neutral-500',
   Instantly: 'bg-purple-100 text-purple-700',
   'LinkedIn Activity': 'bg-sky-100 text-sky-700'
 };
@@ -103,7 +107,7 @@ export function ContactsTable({
                     ) : (
                       <span
                         className="text-xs text-neutral-300"
-                        title="Delete this from its own page (Website Leads / Instantly Leads / LinkedIn Activity) — Contacts is a combined view"
+                        title="Delete this from its own page (Leads / Instantly Leads / LinkedIn Activity) — Contacts is a combined view"
                       >
                         —
                       </span>

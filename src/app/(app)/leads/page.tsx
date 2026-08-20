@@ -1,8 +1,8 @@
 import { BarTrend } from '@/components/bar-trend';
 import { BreakdownBars } from '@/components/breakdown-bars';
 import { createClient } from '@/lib/supabase/server';
-import { LEAD_STATUSES, type Rep, type WebsiteLead } from '@/lib/types';
-import { WebsiteLeadsTable } from './table';
+import { LEAD_STATUSES, type Lead, type Rep } from '@/lib/types';
+import { LeadsTable } from './table';
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-neutral-500',
@@ -12,7 +12,7 @@ const STATUS_COLORS: Record<string, string> = {
   Lost: 'bg-red-400'
 };
 
-export default async function WebsiteLeadsPage() {
+export default async function LeadsPage() {
   const supabase = await createClient();
 
   const [{ data: leads }, { data: reps }] = await Promise.all([
@@ -20,7 +20,7 @@ export default async function WebsiteLeadsPage() {
       .from('website_leads')
       .select('*')
       .order('created_at', { ascending: false })
-      .returns<WebsiteLead[]>(),
+      .returns<Lead[]>(),
     supabase.from('reps').select('*').order('name').returns<Rep[]>()
   ]);
 
@@ -34,15 +34,18 @@ export default async function WebsiteLeadsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-semibold text-neutral-900">Website Leads</h1>
-      <p className="mb-6 text-sm text-neutral-500">From the Framer site contact form.</p>
+      <h1 className="mb-1 text-xl font-semibold text-neutral-900">Leads</h1>
+      <p className="mb-6 text-sm text-neutral-500">
+        Every lead in the pipeline — from the website contact form, offline events,
+        referrals, or research — in one place.
+      </p>
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <BarTrend title="New leads" data={dailyPoints} colorClass="bg-blue-500" />
         <BreakdownBars title="By status" items={statusBreakdown} />
       </div>
 
-      <WebsiteLeadsTable leads={allLeads} reps={reps ?? []} statuses={LEAD_STATUSES} />
+      <LeadsTable leads={allLeads} reps={reps ?? []} statuses={LEAD_STATUSES} />
     </div>
   );
 }

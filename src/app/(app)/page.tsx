@@ -62,7 +62,7 @@ export default async function DashboardPage() {
   const openDealsValue = (openDealsValueRows ?? []).reduce((sum, d) => sum + (d.value ?? 0), 0);
 
   const tiles = [
-    { label: 'Website Leads', count: websiteCount ?? 0, href: '/website-leads' },
+    { label: 'Leads', count: websiteCount ?? 0, href: '/leads' },
     { label: 'Instantly Leads', count: instantlyCount ?? 0, href: '/instantly-leads' },
     { label: 'Interested (Instantly)', count: interestedCount ?? 0, href: '/instantly-leads?filter=Interested' },
     { label: 'Needs Cold Call', count: coldCallCount ?? 0, href: '/instantly-leads?filter=All&coldCall=1' },

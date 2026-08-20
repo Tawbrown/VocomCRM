@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
       location: field(['Location', 'location']),
       company_size: field(['Company Size', 'company_size']),
       use_case: field(['Use Case', 'use_case']),
+      source: 'Website',
       raw_payload: data
     })
     .select('id')
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
   await supabase.from('notifications').insert({
     type: 'website_lead',
     title: `New website lead: ${name || email || 'Unknown'}${company ? ` (${company})` : ''}`,
-    link: '/website-leads',
+    link: '/leads',
     related_id: inserted?.id ?? null
   });
 

@@ -5,8 +5,12 @@ import { ImportForm } from './import-form';
 import { ContactsTable } from './table';
 
 const FIXED_SOURCES = [
-  { label: 'Website Lead', colorClass: 'bg-blue-500' },
-  { label: 'Instantly', colorClass: 'bg-purple-500' },
+  { label: 'Website', colorClass: 'bg-blue-500' },
+  { label: 'Offline Event', colorClass: 'bg-purple-500' },
+  { label: 'Referral', colorClass: 'bg-green-500' },
+  { label: 'Research', colorClass: 'bg-amber-500' },
+  { label: 'Other', colorClass: 'bg-neutral-400' },
+  { label: 'Instantly', colorClass: 'bg-purple-700' },
   { label: 'LinkedIn Activity', colorClass: 'bg-sky-500' }
 ];
 
@@ -52,10 +56,10 @@ export default async function ContactsPage({
     <div>
       <h1 className="mb-1 text-xl font-semibold text-neutral-900">Contacts</h1>
       <p className="mb-6 text-sm text-neutral-500">
-        Every contact this CRM has ever touched — website leads, Instantly leads, LinkedIn
-        activity, and anything imported below (Hunter.io exports, LinkedIn Sales Navigator
-        lists, etc). Not deduplicated across sources — same person from two places shows
-        twice, tagged by source.
+        Every contact this CRM has ever touched — leads, Instantly leads, LinkedIn activity,
+        and anything imported below (Hunter.io exports, LinkedIn Sales Navigator lists,
+        etc). Not deduplicated across sources — same person from two places shows twice,
+        tagged by source.
       </p>
 
       <div className="mb-6 max-w-md">

@@ -17,7 +17,12 @@ const STATUS_COLORS: Record<string, string> = {
   Open: 'bg-neutral-100 text-neutral-700',
   'In Progress': 'bg-blue-100 text-blue-700',
   Resolved: 'bg-green-100 text-green-700',
-  "Won't Fix": 'bg-red-100 text-red-700'
+  "Won't Fix": 'bg-red-100 text-red-700',
+  Website: 'bg-blue-100 text-blue-700',
+  'Offline Event': 'bg-purple-100 text-purple-700',
+  Referral: 'bg-green-100 text-green-700',
+  Research: 'bg-amber-100 text-amber-700',
+  Other: 'bg-neutral-100 text-neutral-500'
 };
 
 export function StatusSelect({
