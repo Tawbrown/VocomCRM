@@ -280,13 +280,24 @@ async function syncLeads(
         await supabase.from('instantly_leads').update({ campaign_status: campaignStatus }).eq('campaign', campaign.name);
       }
 
-      await runInBatches(progressUpdates, 15, async (u) => {
-        await supabase
+      // Was previously one .update() round-trip per changed lead — with 12,000+ leads and
+      // sequence progress shifting daily for anyone in an active campaign, that meant
+      // thousands of sequential network calls and was the actual cause of the sync timing
+      // out (240s cap) every day since this was added. Every row here already exists
+      // (filtered above), so a single bulk upsert per campaign is always an UPDATE, never
+      // an INSERT — safe, and cuts this to a handful of round-trips instead of thousands.
+      for (let i = 0; i < progressUpdates.length; i += 500) {
+        const chunk = progressUpdates.slice(i, i + 500).map((u) => ({
+          email: u.email,
+          campaign: campaign.name,
+          sequence_status: u.sequence_status,
+          last_contacted_at: u.last_contacted_at
+        }));
+        const { error } = await supabase
           .from('instantly_leads')
-          .update({ sequence_status: u.sequence_status, last_contacted_at: u.last_contacted_at })
-          .eq('email', u.email)
-          .eq('campaign', campaign.name);
-      });
+          .upsert(chunk, { onConflict: 'email,campaign' });
+        if (error) throw error;
+      }
       progressUpdated += progressUpdates.length;
     } catch (err) {
       skippedCampaigns.push(campaign.name);
