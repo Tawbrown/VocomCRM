@@ -56,6 +56,15 @@ function sequenceStatusLabel(code: number | string | null | undefined): string |
   return SEQUENCE_STATUS_LABELS[String(code)] ?? String(code);
 }
 
+// Postgres round-trips timestamptz with different string formatting than Instantly's own
+// ISO strings (trailing zeros, precision) — a strict string compare flags nearly every
+// lead as "changed" on every run even when the actual moment in time is identical.
+function sameInstant(a: string | null, b: string | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return new Date(a).getTime() === new Date(b).getTime();
+}
+
 interface InstantlyCampaign {
   id: string;
   name: string;
@@ -259,7 +268,7 @@ async function syncLeads(
           const newLastContacted = lead.timestamp_last_contact ?? null;
           if (
             existingRow.sequence_status !== newSequenceStatus ||
-            existingRow.last_contacted_at !== newLastContacted
+            !sameInstant(existingRow.last_contacted_at, newLastContacted)
           ) {
             progressUpdates.push({
               email: lead.email,
