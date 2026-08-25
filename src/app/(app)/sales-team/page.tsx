@@ -61,7 +61,7 @@ export default async function SalesTeamPage() {
           <li key={rep.id} className="flex items-center justify-between px-4 py-3 text-sm text-neutral-900">
             {rep.name}
             <DeleteButton
-              onDelete={() => deleteRep(rep.id)}
+              onDelete={deleteRep.bind(null, rep.id)}
               confirmMessage={`Delete ${rep.name}? Their existing assignments will show as Unassigned.`}
             />
           </li>
