@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { runInstantlySync } from '@/lib/instantly-sync';
 import { createClient } from '@/lib/supabase/server';
 import type {
   DealPipelineStatus,
@@ -11,6 +12,18 @@ import type {
   LinkedInActivityType,
   Notification
 } from '@/lib/types';
+
+export async function triggerInstantlySync() {
+  const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const result = await runInstantlySync();
+  revalidatePath('/instantly-leads');
+  return result;
+}
 
 async function repName(supabase: Awaited<ReturnType<typeof createClient>>, repId: string) {
   const { data } = await supabase.from('reps').select('name').eq('id', repId).maybeSingle();

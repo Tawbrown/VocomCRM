@@ -1,7 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
 import { LEAD_STATUSES, type InstantlyLead, type Rep } from '@/lib/types';
 import { CAMPAIGN_STATUS_FILTERS, INTEREST_FILTERS, SEQUENCE_STATUS_FILTERS } from './constants';
+import { SyncNowButton } from './sync-button';
 import { InstantlyLeadsTable } from './table';
+
+// Matches the cron route's own budget — the manual "Sync Now" button on this page calls
+// the same sync logic via a server action, which needs the same headroom.
+export const maxDuration = 240;
 
 const PAGE_SIZE = 100;
 
@@ -110,10 +115,14 @@ export default async function InstantlyLeadsPage({
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-semibold text-neutral-900">Instantly Leads</h1>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold text-neutral-900">Instantly Leads</h1>
+        <SyncNowButton />
+      </div>
       <p className="mb-6 text-sm text-neutral-500">
         Synced daily from your Instantly campaigns — interest status, phone, and LinkedIn
-        come straight from Instantly&apos;s own reply classification.
+        come straight from Instantly&apos;s own reply classification. Use Sync Now if
+        today&apos;s automatic sync hasn&apos;t run yet.
       </p>
       <InstantlyLeadsTable
         leads={leads ?? []}
