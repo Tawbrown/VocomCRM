@@ -1,12 +1,32 @@
 'use client';
 
+import Link from 'next/link';
 import { deleteLead, updateLead } from '@/app/actions';
 import { DealSelect } from '@/components/deal-select';
 import { DeleteButton } from '@/components/delete-button';
+import { NotesButton } from '@/components/notes-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import { LEAD_PRIORITIES, LEAD_SOURCES, type Deal, type Lead, type Rep } from '@/lib/types';
 import { useHighlightRow } from '@/lib/use-highlight-row';
+
+function DealCell({ lead, deals }: { lead: Lead; deals: Deal[] }) {
+  const linkedDeal = lead.deal_id ? deals.find((d) => d.id === lead.deal_id) : null;
+  return (
+    <div className="flex items-center gap-1.5">
+      <DealSelect deals={deals} value={lead.deal_id} onChange={(deal_id) => updateLead(lead.id, { deal_id })} />
+      {linkedDeal && (
+        <Link
+          href={`/deals?id=${linkedDeal.id}`}
+          className="text-xs text-neutral-400 hover:text-neutral-600"
+          title={`Open ${linkedDeal.customer_name} on Deals`}
+        >
+          view →
+        </Link>
+      )}
+    </div>
+  );
+}
 
 export function LeadsTable({
   leads,
@@ -37,6 +57,7 @@ export function LeadsTable({
             <th className="px-4 py-3 font-medium">Phone</th>
             <th className="px-4 py-3 font-medium">Company</th>
             <th className="px-4 py-3 font-medium">Deal</th>
+            <th className="px-4 py-3 font-medium">Notes</th>
             <th className="px-4 py-3 font-medium">Source</th>
             <th className="px-4 py-3 font-medium">Priority</th>
             <th className="px-4 py-3 font-medium">Company Size</th>
@@ -66,7 +87,15 @@ export function LeadsTable({
               <td className="px-4 py-3 text-neutral-600">{lead.phone || '—'}</td>
               <td className="px-4 py-3 text-neutral-600">{lead.company || '—'}</td>
               <td className="px-4 py-3">
-                <DealSelect deals={deals} value={lead.deal_id} onChange={(deal_id) => updateLead(lead.id, { deal_id })} />
+                <DealCell lead={lead} deals={deals} />
+              </td>
+              <td className="px-4 py-3">
+                <NotesButton
+                  title={lead.name || lead.company || 'Lead'}
+                  subtitle={lead.company}
+                  notes={lead.notes}
+                  onSave={(notes) => updateLead(lead.id, { notes })}
+                />
               </td>
               <td className="px-4 py-3">
                 <StatusSelect

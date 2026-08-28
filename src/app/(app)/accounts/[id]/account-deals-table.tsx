@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useTransition } from 'react';
 import { deleteDeal, updateDeal } from '@/app/actions';
 import { DeleteButton } from '@/components/delete-button';
+import { NotesButton } from '@/components/notes-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import { DEAL_PIPELINE_STATUSES, type Deal, type Rep } from '@/lib/types';
@@ -45,6 +46,7 @@ export function AccountDealsTable({
             <th className="px-4 py-3 font-medium">Customer</th>
             <th className="px-4 py-3 font-medium">Product / Order</th>
             <th className="px-4 py-3 font-medium">Value</th>
+            <th className="px-4 py-3 font-medium">Notes</th>
             <th className="px-4 py-3 font-medium">Leads</th>
             <th className="px-4 py-3 font-medium">Assigned Rep</th>
             <th className="px-4 py-3 font-medium">Status</th>
@@ -55,13 +57,20 @@ export function AccountDealsTable({
           {deals.map((deal) => (
             <tr key={deal.id}>
               <td className="px-4 py-3 text-neutral-900">
-                <Link href="/deals" className="hover:underline">
+                <Link href={`/deals?id=${deal.id}`} className="hover:underline">
                   {deal.customer_name}
                 </Link>
               </td>
               <td className="px-4 py-3 text-neutral-600">{deal.product || '—'}</td>
               <td className="px-4 py-3">
                 <ValueCell value={deal.value} onChange={(value) => updateDeal(deal.id, { value })} />
+              </td>
+              <td className="px-4 py-3">
+                <NotesButton
+                  title={deal.customer_name}
+                  notes={deal.notes}
+                  onSave={(notes) => updateDeal(deal.id, { notes })}
+                />
               </td>
               <td className="px-4 py-3 text-neutral-600">{leadCountByDeal.get(deal.id) ?? 0}</td>
               <td className="px-4 py-3">

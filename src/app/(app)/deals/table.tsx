@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useTransition } from 'react';
 import { createAccountFromDeal, deleteDeal, updateDeal } from '@/app/actions';
 import { AccountSelect } from '@/components/account-select';
 import { DeleteButton } from '@/components/delete-button';
+import { NotesButton } from '@/components/notes-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import type { Account, Deal, Rep } from '@/lib/types';
@@ -39,24 +41,9 @@ function ValueInput({ value, onChange }: { value: number; onChange: (value: numb
   );
 }
 
-function NotesInput({ value, onChange }: { value: string | null; onChange: (value: string) => Promise<void> }) {
-  const [isPending, startTransition] = useTransition();
-  return (
-    <input
-      type="text"
-      defaultValue={value ?? ''}
-      placeholder="Add a note…"
-      disabled={isPending}
-      onBlur={(e) => {
-        if (e.target.value !== (value ?? '')) startTransition(() => onChange(e.target.value));
-      }}
-      className="w-40 rounded-md border border-neutral-300 px-2 py-1 text-sm text-neutral-900 disabled:opacity-50"
-    />
-  );
-}
-
 function AccountCell({ deal, accounts }: { deal: Deal; accounts: Account[] }) {
   const [isPending, startTransition] = useTransition();
+  const linkedAccount = deal.account_id ? accounts.find((a) => a.id === deal.account_id) : null;
   return (
     <div className="flex items-center gap-1.5">
       <AccountSelect
@@ -64,6 +51,15 @@ function AccountCell({ deal, accounts }: { deal: Deal; accounts: Account[] }) {
         value={deal.account_id}
         onChange={(account_id) => updateDeal(deal.id, { account_id })}
       />
+      {linkedAccount && (
+        <Link
+          href={`/accounts/${linkedAccount.id}`}
+          className="text-xs text-neutral-400 hover:text-neutral-600"
+          title={`Open ${linkedAccount.name}`}
+        >
+          view →
+        </Link>
+      )}
       {!deal.account_id && deal.company && (
         <button
           disabled={isPending}
@@ -194,7 +190,12 @@ export function DealsTable({
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <NotesInput value={deal.notes} onChange={(notes) => updateDeal(deal.id, { notes })} />
+                    <NotesButton
+                      title={deal.customer_name}
+                      subtitle={deal.company}
+                      notes={deal.notes}
+                      onSave={(notes) => updateDeal(deal.id, { notes })}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <RepSelect

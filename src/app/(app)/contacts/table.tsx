@@ -115,7 +115,7 @@ export function ContactsTable({
                   </td>
                   <td className="px-4 py-3">
                     {c.origin === 'imported_contacts' ? (
-                      <DeleteButton onDelete={() => deleteImportedContact(c.id)} />
+                      <DeleteButton onDelete={deleteImportedContact.bind(null, c.id)} />
                     ) : (
                       <span
                         className="text-xs text-neutral-300"
