@@ -18,25 +18,28 @@ export function ContactsTable({
   totalCount,
   page,
   pageSize,
-  query
+  query,
+  sort
 }: {
   contacts: MasterContact[];
   totalCount: number;
   page: number;
   pageSize: number;
   query: string;
+  sort: string;
 }) {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const pageHref = (p: number) => {
     const params = new URLSearchParams();
     if (query) params.set('q', query);
+    if (sort && sort !== 'recent') params.set('sort', sort);
     params.set('page', String(p));
     return `?${params.toString()}`;
   };
 
   return (
     <div>
-      <form method="GET" className="mb-4 flex gap-2">
+      <form method="GET" className="mb-4 flex flex-wrap gap-2">
         <input
           type="text"
           name="q"
@@ -44,13 +47,22 @@ export function ContactsTable({
           placeholder="Search by name, email, company, phone..."
           className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 sm:w-80"
         />
+        <select
+          name="sort"
+          defaultValue={sort}
+          className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700"
+        >
+          <option value="recent">Most Recent</option>
+          <option value="name">Name (A-Z)</option>
+          <option value="company">Company (A-Z)</option>
+        </select>
         <button
           type="submit"
           className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
         >
           Search
         </button>
-        {query && (
+        {(query || sort !== 'recent') && (
           <Link
             href="?page=1"
             className="rounded-md px-4 py-2 text-sm text-neutral-500 ring-1 ring-inset ring-neutral-200 hover:bg-neutral-100"

@@ -1,10 +1,12 @@
 export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Won' | 'Lost';
-export type LeadSource = 'Website' | 'Offline Event' | 'Referral' | 'Research' | 'Other';
+export type LeadSource = 'Website' | 'Offline Event' | 'Referral' | 'Research' | 'LinkedIn' | 'Other';
+export type LeadPriority = 'Low' | 'Medium' | 'High';
 export type DealStatus = 'Prospecting' | 'Connected' | 'Conversation' | 'Meeting' | 'Won' | 'Lost';
 export type LinkedInActivityType = 'Follow' | 'Visit' | 'Like';
 
 export const LEAD_STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Won', 'Lost'];
-export const LEAD_SOURCES: LeadSource[] = ['Website', 'Offline Event', 'Referral', 'Research', 'Other'];
+export const LEAD_SOURCES: LeadSource[] = ['Website', 'Offline Event', 'Referral', 'Research', 'LinkedIn', 'Other'];
+export const LEAD_PRIORITIES: LeadPriority[] = ['Low', 'Medium', 'High'];
 export const DEAL_STATUSES: DealStatus[] = [
   'Prospecting',
   'Connected',
@@ -37,11 +39,15 @@ export interface Lead {
   created_at: string;
   name: string | null;
   email: string | null;
+  phone: string | null;
+  job_title: string | null;
+  linkedin_url: string | null;
   company: string | null;
   location: string | null;
   company_size: string | null;
   use_case: string | null;
   source: LeadSource;
+  priority: LeadPriority | null;
   assigned_rep_id: string | null;
   status: LeadStatus;
   contacted_date: string | null;

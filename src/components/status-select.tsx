@@ -22,7 +22,11 @@ const STATUS_COLORS: Record<string, string> = {
   'Offline Event': 'bg-purple-100 text-purple-700',
   Referral: 'bg-green-100 text-green-700',
   Research: 'bg-amber-100 text-amber-700',
-  Other: 'bg-neutral-100 text-neutral-500'
+  LinkedIn: 'bg-sky-100 text-sky-700',
+  Other: 'bg-neutral-100 text-neutral-500',
+  Low: 'bg-neutral-100 text-neutral-500',
+  Medium: 'bg-amber-100 text-amber-700',
+  High: 'bg-red-100 text-red-700'
 };
 
 export function StatusSelect({

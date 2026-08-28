@@ -16,14 +16,21 @@ const FIXED_SOURCES = [
 
 const PAGE_SIZE = 100;
 
+const SORT_OPTIONS: Record<string, { column: string; ascending: boolean }> = {
+  recent: { column: 'touched_at', ascending: false },
+  name: { column: 'name', ascending: true },
+  company: { column: 'company', ascending: true }
+};
+
 export default async function ContactsPage({
   searchParams
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; sort?: string }>;
 }) {
   const params = await searchParams;
   const q = (params.q ?? '').trim();
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1);
+  const sort = params.sort && SORT_OPTIONS[params.sort] ? params.sort : 'recent';
 
   const supabase = await createClient();
 
@@ -34,7 +41,10 @@ export default async function ContactsPage({
       `name.ilike.%${escaped}%,email.ilike.%${escaped}%,company.ilike.%${escaped}%,phone.ilike.%${escaped}%,job_title.ilike.%${escaped}%,source.ilike.%${escaped}%`
     );
   }
-  query = query.order('touched_at', { ascending: false }).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  const { column, ascending } = SORT_OPTIONS[sort];
+  query = query
+    .order(column, { ascending, nullsFirst: false })
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   const [{ data: contacts, count: totalCount }, { count: allCount }, ...sourceCounts] = await Promise.all([
     query.returns<MasterContact[]>(),
@@ -74,6 +84,7 @@ export default async function ContactsPage({
         page={page}
         pageSize={PAGE_SIZE}
         query={q}
+        sort={sort}
       />
     </div>
   );

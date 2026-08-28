@@ -4,7 +4,7 @@ import { deleteLead, updateLead } from '@/app/actions';
 import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
-import { LEAD_SOURCES, type Lead, type Rep } from '@/lib/types';
+import { LEAD_PRIORITIES, LEAD_SOURCES, type Lead, type Rep } from '@/lib/types';
 import { useHighlightRow } from '@/lib/use-highlight-row';
 
 export function LeadsTable({
@@ -29,9 +29,12 @@ export function LeadsTable({
           <tr>
             <th className="px-4 py-3 font-medium">Date</th>
             <th className="px-4 py-3 font-medium">Name</th>
+            <th className="px-4 py-3 font-medium">Job Title</th>
             <th className="px-4 py-3 font-medium">Email</th>
+            <th className="px-4 py-3 font-medium">Phone</th>
             <th className="px-4 py-3 font-medium">Company</th>
             <th className="px-4 py-3 font-medium">Source</th>
+            <th className="px-4 py-3 font-medium">Priority</th>
             <th className="px-4 py-3 font-medium">Company Size</th>
             <th className="px-4 py-3 font-medium">Use Case</th>
             <th className="px-4 py-3 font-medium">Assigned Rep</th>
@@ -45,14 +48,31 @@ export function LeadsTable({
               <td className="whitespace-nowrap px-4 py-3 text-neutral-500">
                 {new Date(lead.created_at).toLocaleDateString()}
               </td>
-              <td className="px-4 py-3 text-neutral-900">{lead.name || '—'}</td>
+              <td className="px-4 py-3 text-neutral-900">
+                {lead.linkedin_url ? (
+                  <a href={lead.linkedin_url} target="_blank" rel="noreferrer" className="hover:underline">
+                    {lead.name || 'LinkedIn profile'}
+                  </a>
+                ) : (
+                  lead.name || '—'
+                )}
+              </td>
+              <td className="px-4 py-3 text-neutral-600">{lead.job_title || '—'}</td>
               <td className="px-4 py-3 text-neutral-600">{lead.email || '—'}</td>
+              <td className="px-4 py-3 text-neutral-600">{lead.phone || '—'}</td>
               <td className="px-4 py-3 text-neutral-600">{lead.company || '—'}</td>
               <td className="px-4 py-3">
                 <StatusSelect
                   options={LEAD_SOURCES}
                   value={lead.source}
                   onChange={(source) => updateLead(lead.id, { source: source as Lead['source'] })}
+                />
+              </td>
+              <td className="px-4 py-3">
+                <StatusSelect
+                  options={LEAD_PRIORITIES}
+                  value={lead.priority ?? 'Medium'}
+                  onChange={(priority) => updateLead(lead.id, { priority: priority as Lead['priority'] })}
                 />
               </td>
               <td className="px-4 py-3 text-neutral-600">{lead.company_size || '—'}</td>

@@ -7,6 +7,7 @@ import type {
   DealPipelineStatus,
   DealStatus,
   FeedbackStatus,
+  LeadPriority,
   LeadSource,
   LeadStatus,
   LinkedInActivityType,
@@ -53,6 +54,10 @@ export async function updateLead(
     assigned_rep_id: string | null;
     status: LeadStatus;
     source: LeadSource;
+    priority: LeadPriority | null;
+    job_title: string;
+    phone: string;
+    linkedin_url: string;
     notes: string;
     contacted_date: string | null;
   }>
