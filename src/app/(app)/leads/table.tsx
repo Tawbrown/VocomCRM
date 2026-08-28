@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTransition } from 'react';
 import { deleteLead, updateLead } from '@/app/actions';
 import { DealSelect } from '@/components/deal-select';
 import { DeleteButton } from '@/components/delete-button';
@@ -9,6 +10,48 @@ import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import { LEAD_PRIORITIES, LEAD_SOURCES, type Deal, type Lead, type Rep } from '@/lib/types';
 import { useHighlightRow } from '@/lib/use-highlight-row';
+
+function Cell({
+  value,
+  onChange,
+  width = 'w-28'
+}: {
+  value: string | null;
+  onChange: (value: string) => Promise<void>;
+  width?: string;
+}) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <input
+      type="text"
+      defaultValue={value ?? ''}
+      disabled={isPending}
+      onBlur={(e) => {
+        if (e.target.value !== (value ?? '')) startTransition(() => onChange(e.target.value));
+      }}
+      className={`${width} rounded-md border border-neutral-300 px-2 py-1 text-sm text-neutral-900 disabled:opacity-50`}
+    />
+  );
+}
+
+function NameCell({ lead }: { lead: Lead }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Cell value={lead.name} onChange={(name) => updateLead(lead.id, { name })} />
+      {lead.linkedin_url && (
+        <a
+          href={lead.linkedin_url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs text-neutral-400 hover:text-neutral-600"
+          title="Open LinkedIn profile"
+        >
+          🔗
+        </a>
+      )}
+    </div>
+  );
+}
 
 function DealCell({ lead, deals }: { lead: Lead; deals: Deal[] }) {
   const linkedDeal = lead.deal_id ? deals.find((d) => d.id === lead.deal_id) : null;
@@ -73,19 +116,21 @@ export function LeadsTable({
               <td className="whitespace-nowrap px-4 py-3 text-neutral-500">
                 {new Date(lead.created_at).toLocaleDateString()}
               </td>
-              <td className="px-4 py-3 text-neutral-900">
-                {lead.linkedin_url ? (
-                  <a href={lead.linkedin_url} target="_blank" rel="noreferrer" className="hover:underline">
-                    {lead.name || 'LinkedIn profile'}
-                  </a>
-                ) : (
-                  lead.name || '—'
-                )}
+              <td className="px-4 py-3">
+                <NameCell lead={lead} />
               </td>
-              <td className="px-4 py-3 text-neutral-600">{lead.job_title || '—'}</td>
-              <td className="px-4 py-3 text-neutral-600">{lead.email || '—'}</td>
-              <td className="px-4 py-3 text-neutral-600">{lead.phone || '—'}</td>
-              <td className="px-4 py-3 text-neutral-600">{lead.company || '—'}</td>
+              <td className="px-4 py-3">
+                <Cell value={lead.job_title} onChange={(job_title) => updateLead(lead.id, { job_title })} />
+              </td>
+              <td className="px-4 py-3">
+                <Cell value={lead.email} onChange={(email) => updateLead(lead.id, { email })} width="w-40" />
+              </td>
+              <td className="px-4 py-3">
+                <Cell value={lead.phone} onChange={(phone) => updateLead(lead.id, { phone })} />
+              </td>
+              <td className="px-4 py-3">
+                <Cell value={lead.company} onChange={(company) => updateLead(lead.id, { company })} />
+              </td>
               <td className="px-4 py-3">
                 <DealCell lead={lead} deals={deals} />
               </td>
@@ -111,8 +156,16 @@ export function LeadsTable({
                   onChange={(priority) => updateLead(lead.id, { priority: priority as Lead['priority'] })}
                 />
               </td>
-              <td className="px-4 py-3 text-neutral-600">{lead.company_size || '—'}</td>
-              <td className="px-4 py-3 text-neutral-600">{lead.use_case || '—'}</td>
+              <td className="px-4 py-3">
+                <Cell
+                  value={lead.company_size}
+                  onChange={(company_size) => updateLead(lead.id, { company_size })}
+                  width="w-20"
+                />
+              </td>
+              <td className="px-4 py-3">
+                <Cell value={lead.use_case} onChange={(use_case) => updateLead(lead.id, { use_case })} />
+              </td>
               <td className="px-4 py-3">
                 <RepSelect
                   reps={reps}

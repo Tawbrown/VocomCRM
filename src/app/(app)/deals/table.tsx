@@ -12,6 +12,36 @@ import { StatusSelect } from '@/components/status-select';
 import type { Account, Deal, Rep } from '@/lib/types';
 import { useHighlightRow } from '@/lib/use-highlight-row';
 
+function TextCell({
+  value,
+  onChange,
+  required = false,
+  width = 'w-32'
+}: {
+  value: string | null;
+  onChange: (value: string) => Promise<void>;
+  required?: boolean;
+  width?: string;
+}) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <input
+      type="text"
+      defaultValue={value ?? ''}
+      disabled={isPending}
+      onBlur={(e) => {
+        const next = e.target.value;
+        if (required && !next.trim()) {
+          e.target.value = value ?? '';
+          return;
+        }
+        if (next !== (value ?? '')) startTransition(() => onChange(next));
+      }}
+      className={`${width} rounded-md border border-neutral-300 px-2 py-1 text-sm text-neutral-900 disabled:opacity-50`}
+    />
+  );
+}
+
 function DateInput({ value, onChange }: { value: string | null; onChange: (value: string) => Promise<void> }) {
   const [isPending, startTransition] = useTransition();
   return (
@@ -173,13 +203,25 @@ export function DealsTable({
             <tbody className="divide-y divide-neutral-100">
               {filteredAndSorted.map((deal) => (
                 <tr key={deal.id} {...rowProps(deal.id)}>
-                  <td className="px-4 py-3 text-neutral-900">{deal.customer_name}</td>
-                  <td className="px-4 py-3 text-neutral-600">{deal.company || '—'}</td>
+                  <td className="px-4 py-3">
+                    <TextCell
+                      value={deal.customer_name}
+                      onChange={(customer_name) => updateDeal(deal.id, { customer_name })}
+                      required
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <TextCell value={deal.company} onChange={(company) => updateDeal(deal.id, { company })} />
+                  </td>
                   <td className="px-4 py-3">
                     <AccountCell deal={deal} accounts={accounts} />
                   </td>
-                  <td className="px-4 py-3 text-neutral-600">{deal.pic || '—'}</td>
-                  <td className="px-4 py-3 text-neutral-600">{deal.product || '—'}</td>
+                  <td className="px-4 py-3">
+                    <TextCell value={deal.pic} onChange={(pic) => updateDeal(deal.id, { pic })} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <TextCell value={deal.product} onChange={(product) => updateDeal(deal.id, { product })} width="w-40" />
+                  </td>
                   <td className="px-4 py-3">
                     <ValueInput value={deal.value} onChange={(value) => updateDeal(deal.id, { value })} />
                   </td>

@@ -55,8 +55,13 @@ export async function updateLead(
     status: LeadStatus;
     source: LeadSource;
     priority: LeadPriority | null;
+    name: string;
+    email: string;
     job_title: string;
     phone: string;
+    company: string;
+    company_size: string;
+    use_case: string;
     linkedin_url: string;
     notes: string;
     contacted_date: string | null;
@@ -213,6 +218,10 @@ export async function updateDeal(
     expected_close_date: string | null;
     notes: string;
     account_id: string | null;
+    customer_name: string;
+    company: string;
+    pic: string;
+    product: string;
   }>
 ) {
   const supabase = await createClient();
