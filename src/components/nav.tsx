@@ -5,18 +5,36 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from '@/app/actions';
 
-const LINKS = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/accounts', label: 'Accounts' },
-  { href: '/leads', label: 'Leads' },
-  { href: '/deals', label: 'Deals' },
-  { href: '/instantly-leads', label: 'Instantly Leads' },
-  { href: '/linkedin-activity', label: 'LinkedIn Activity' },
-  { href: '/linkedin-marketing', label: 'LinkedIn Marketing' },
-  { href: '/seo', label: 'SEO' },
-  { href: '/contacts', label: 'Contacts' },
-  { href: '/sales-team', label: 'Sales Team' },
-  { href: '/feedback', label: 'Feedback' }
+const NAV_GROUPS = [
+  {
+    label: null,
+    links: [{ href: '/', label: 'Dashboard' }]
+  },
+  {
+    label: 'Sales',
+    links: [
+      { href: '/accounts', label: 'Accounts' },
+      { href: '/leads', label: 'Leads' },
+      { href: '/deals', label: 'Deals' }
+    ]
+  },
+  {
+    label: 'Marketing',
+    links: [
+      { href: '/instantly-leads', label: 'Instantly Leads' },
+      { href: '/linkedin-activity', label: 'LinkedIn Activity' },
+      { href: '/linkedin-marketing', label: 'LinkedIn Marketing' },
+      { href: '/seo', label: 'SEO' }
+    ]
+  },
+  {
+    label: 'General',
+    links: [
+      { href: '/contacts', label: 'Contacts' },
+      { href: '/sales-team', label: 'Sales Team' },
+      { href: '/feedback', label: 'Feedback' }
+    ]
+  }
 ];
 
 function VocomMark() {
@@ -32,21 +50,32 @@ function VocomMark() {
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
     <>
-      {LINKS.map((link) => {
-        const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={onNavigate}
-            className={`block rounded-md px-3 py-2 text-sm font-medium transition ${
-              active ? 'bg-vocom text-white' : 'text-neutral-600 hover:bg-vocom/8 hover:text-vocom'
-            }`}
-          >
-            {link.label}
-          </Link>
-        );
-      })}
+      {NAV_GROUPS.map((group, i) => (
+        <div key={group.label ?? i} className={i > 0 ? 'mt-4' : undefined}>
+          {group.label && (
+            <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+              {group.label}
+            </p>
+          )}
+          <div className="space-y-0.5">
+            {group.links.map((link) => {
+              const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={onNavigate}
+                  className={`block rounded-md px-3 py-2 text-sm font-medium transition ${
+                    active ? 'bg-vocom text-white' : 'text-neutral-600 hover:bg-vocom/8 hover:text-vocom'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </>
   );
 }
@@ -88,7 +117,7 @@ export function Nav() {
       </header>
 
       {menuOpen && (
-        <nav className="space-y-0.5 border-b border-neutral-200 bg-white px-3 py-2 md:hidden">
+        <nav className="border-b border-neutral-200 bg-white px-3 py-2 md:hidden">
           <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
           <button
             onClick={handleSignOut}
@@ -105,7 +134,7 @@ export function Nav() {
           <VocomMark />
           <span className="text-base font-bold tracking-wide text-vocom">VOCOM CRM</span>
         </div>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3">
+        <nav className="flex-1 overflow-y-auto px-3">
           <NavLinks pathname={pathname} />
         </nav>
         <div className="border-t border-neutral-200 px-3 py-4">

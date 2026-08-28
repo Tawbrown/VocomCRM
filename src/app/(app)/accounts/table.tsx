@@ -1,12 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { deleteAccount, updateAccount } from '@/app/actions';
 import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import type { Account, Rep } from '@/lib/types';
 import { useHighlightRow } from '@/lib/use-highlight-row';
+
+function Cell({ value, onChange, width = 'w-32' }: { value: string | null; onChange: (value: string) => Promise<void>; width?: string }) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <input
+      type="text"
+      defaultValue={value ?? ''}
+      disabled={isPending}
+      onBlur={(e) => {
+        if (e.target.value !== (value ?? '')) startTransition(() => onChange(e.target.value));
+      }}
+      className={`${width} rounded-md border border-neutral-300 px-2 py-1 text-sm text-neutral-900 disabled:opacity-50`}
+    />
+  );
+}
 
 type SortKey = 'name' | 'created_at' | 'deals_desc';
 
@@ -106,10 +121,22 @@ export function AccountsTable({
                       {account.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-neutral-600">{account.hq || '—'}</td>
-                  <td className="px-4 py-3 text-neutral-600">{account.website || '—'}</td>
-                  <td className="px-4 py-3 text-neutral-600">{account.industry || '—'}</td>
-                  <td className="px-4 py-3 text-neutral-600">{account.company_size || '—'}</td>
+                  <td className="px-4 py-3">
+                    <Cell value={account.hq} onChange={(hq) => updateAccount(account.id, { hq })} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Cell value={account.website} onChange={(website) => updateAccount(account.id, { website })} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Cell value={account.industry} onChange={(industry) => updateAccount(account.id, { industry })} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Cell
+                      value={account.company_size}
+                      onChange={(company_size) => updateAccount(account.id, { company_size })}
+                      width="w-20"
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <RepSelect
                       reps={reps}
