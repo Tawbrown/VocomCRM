@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { useTransition } from 'react';
-import { deleteDeal, updateDeal } from '@/app/actions';
+import { createAccountFromDeal, deleteDeal, updateDeal } from '@/app/actions';
+import { AccountSelect } from '@/components/account-select';
 import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
-import type { Deal, Rep } from '@/lib/types';
+import type { Account, Deal, Rep } from '@/lib/types';
 import { useHighlightRow } from '@/lib/use-highlight-row';
 
 function DateInput({ value, onChange }: { value: string | null; onChange: (value: string) => Promise<void> }) {
@@ -54,15 +55,40 @@ function NotesInput({ value, onChange }: { value: string | null; onChange: (valu
   );
 }
 
+function AccountCell({ deal, accounts }: { deal: Deal; accounts: Account[] }) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <div className="flex items-center gap-1.5">
+      <AccountSelect
+        accounts={accounts}
+        value={deal.account_id}
+        onChange={(account_id) => updateDeal(deal.id, { account_id })}
+      />
+      {!deal.account_id && deal.company && (
+        <button
+          disabled={isPending}
+          onClick={() => startTransition(() => createAccountFromDeal(deal.id))}
+          className="text-xs text-neutral-400 hover:text-neutral-600 disabled:opacity-50"
+          title={`Create an account named "${deal.company}" and link this deal to it`}
+        >
+          + Account
+        </button>
+      )}
+    </div>
+  );
+}
+
 type SortKey = 'start_date' | 'value_desc' | 'expected_close_date' | 'customer_name';
 
 export function DealsTable({
   deals,
   reps,
+  accounts,
   statuses
 }: {
   deals: Deal[];
   reps: Rep[];
+  accounts: Account[];
   statuses: string[];
 }) {
   const { rowProps } = useHighlightRow();
@@ -137,6 +163,7 @@ export function DealsTable({
               <tr>
                 <th className="px-4 py-3 font-medium">Customer</th>
                 <th className="px-4 py-3 font-medium">Company</th>
+                <th className="px-4 py-3 font-medium">Account</th>
                 <th className="px-4 py-3 font-medium">PIC</th>
                 <th className="px-4 py-3 font-medium">Product / Order</th>
                 <th className="px-4 py-3 font-medium">Value</th>
@@ -152,6 +179,9 @@ export function DealsTable({
                 <tr key={deal.id} {...rowProps(deal.id)}>
                   <td className="px-4 py-3 text-neutral-900">{deal.customer_name}</td>
                   <td className="px-4 py-3 text-neutral-600">{deal.company || '—'}</td>
+                  <td className="px-4 py-3">
+                    <AccountCell deal={deal} accounts={accounts} />
+                  </td>
                   <td className="px-4 py-3 text-neutral-600">{deal.pic || '—'}</td>
                   <td className="px-4 py-3 text-neutral-600">{deal.product || '—'}</td>
                   <td className="px-4 py-3">

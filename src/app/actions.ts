@@ -60,6 +60,7 @@ export async function updateLead(
     linkedin_url: string;
     notes: string;
     contacted_date: string | null;
+    deal_id: string | null;
   }>
 ) {
   const supabase = await createClient();
@@ -211,6 +212,7 @@ export async function updateDeal(
     value: number;
     expected_close_date: string | null;
     notes: string;
+    account_id: string | null;
   }>
 ) {
   const supabase = await createClient();
@@ -237,6 +239,104 @@ export async function deleteDeal(id: string) {
   const supabase = await createClient();
   await supabase.from('deals').delete().eq('id', id);
   revalidatePath('/deals');
+}
+
+export async function addAccount(formData: FormData) {
+  const supabase = await createClient();
+  const name = (formData.get('name') as string)?.trim();
+  if (!name) return;
+
+  await supabase.from('accounts').insert({
+    name,
+    hq: (formData.get('hq') as string) || null,
+    website: (formData.get('website') as string) || null,
+    industry: (formData.get('industry') as string) || null,
+    company_size: (formData.get('company_size') as string) || null,
+    notes: (formData.get('notes') as string) || null,
+    assigned_rep_id: (formData.get('assigned_rep_id') as string) || null
+  });
+  revalidatePath('/accounts');
+}
+
+export async function updateAccount(
+  id: string,
+  fields: Partial<{
+    name: string;
+    hq: string | null;
+    website: string | null;
+    industry: string | null;
+    company_size: string | null;
+    notes: string | null;
+    assigned_rep_id: string | null;
+  }>
+) {
+  const supabase = await createClient();
+  const { data: updated } = await supabase
+    .from('accounts')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('name')
+    .maybeSingle();
+  if (fields.assigned_rep_id) {
+    await notifyAssignment(supabase, fields.assigned_rep_id, 'account', updated?.name || 'an account', '/accounts', id);
+  }
+  revalidatePath('/accounts');
+  revalidatePath(`/accounts/${id}`);
+}
+
+export async function deleteAccount(id: string) {
+  const supabase = await createClient();
+  await supabase.from('accounts').delete().eq('id', id);
+  revalidatePath('/accounts');
+}
+
+export async function addAccountContact(accountId: string, formData: FormData) {
+  const supabase = await createClient();
+  const name = (formData.get('name') as string)?.trim();
+  if (!name) return;
+
+  await supabase.from('account_contacts').insert({
+    account_id: accountId,
+    name,
+    job_title: (formData.get('job_title') as string) || null,
+    email: (formData.get('email') as string) || null,
+    phone: (formData.get('phone') as string) || null,
+    notes: (formData.get('notes') as string) || null
+  });
+  revalidatePath(`/accounts/${accountId}`);
+  revalidatePath('/contacts');
+}
+
+export async function updateAccountContact(
+  id: string,
+  accountId: string,
+  fields: Partial<{ name: string; job_title: string | null; email: string | null; phone: string | null; notes: string | null }>
+) {
+  const supabase = await createClient();
+  await supabase.from('account_contacts').update(fields).eq('id', id);
+  revalidatePath(`/accounts/${accountId}`);
+  revalidatePath('/contacts');
+}
+
+export async function deleteAccountContact(id: string, accountId: string) {
+  const supabase = await createClient();
+  await supabase.from('account_contacts').delete().eq('id', id);
+  revalidatePath(`/accounts/${accountId}`);
+  revalidatePath('/contacts');
+}
+
+export async function createAccountFromDeal(dealId: string) {
+  const supabase = await createClient();
+  const { data: deal } = await supabase.from('deals').select('company, customer_name').eq('id', dealId).maybeSingle();
+  const name = deal?.company?.trim() || deal?.customer_name?.trim() || 'New Account';
+
+  const { data: account } = await supabase.from('accounts').insert({ name }).select('id').single();
+  if (account) {
+    await supabase.from('deals').update({ account_id: account.id, updated_at: new Date().toISOString() }).eq('id', dealId);
+  }
+  revalidatePath('/deals');
+  revalidatePath('/accounts');
+  return account?.id ?? null;
 }
 
 export async function addFeedback(formData: FormData) {

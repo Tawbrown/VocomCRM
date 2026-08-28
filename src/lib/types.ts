@@ -52,6 +52,31 @@ export interface Lead {
   status: LeadStatus;
   contacted_date: string | null;
   notes: string | null;
+  deal_id: string | null;
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  hq: string | null;
+  website: string | null;
+  industry: string | null;
+  company_size: string | null;
+  notes: string | null;
+  assigned_rep_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AccountContact {
+  id: string;
+  account_id: string;
+  name: string | null;
+  job_title: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  created_at: string;
 }
 
 export interface InstantlyLead {
@@ -109,7 +134,7 @@ export interface LinkedInAudienceStat {
 
 export interface MasterContact {
   id: string;
-  origin: 'website_leads' | 'instantly_leads' | 'linkedin_activity' | 'imported_contacts';
+  origin: 'website_leads' | 'instantly_leads' | 'linkedin_activity' | 'imported_contacts' | 'account_contacts';
   source: string;
   name: string | null;
   email: string | null;
@@ -169,6 +194,7 @@ export interface Deal {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  account_id: string | null;
 }
 
 export interface Feedback {

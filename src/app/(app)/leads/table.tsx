@@ -1,19 +1,22 @@
 'use client';
 
 import { deleteLead, updateLead } from '@/app/actions';
+import { DealSelect } from '@/components/deal-select';
 import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
-import { LEAD_PRIORITIES, LEAD_SOURCES, type Lead, type Rep } from '@/lib/types';
+import { LEAD_PRIORITIES, LEAD_SOURCES, type Deal, type Lead, type Rep } from '@/lib/types';
 import { useHighlightRow } from '@/lib/use-highlight-row';
 
 export function LeadsTable({
   leads,
   reps,
+  deals,
   statuses
 }: {
   leads: Lead[];
   reps: Rep[];
+  deals: Deal[];
   statuses: string[];
 }) {
   const { rowProps } = useHighlightRow();
@@ -33,6 +36,7 @@ export function LeadsTable({
             <th className="px-4 py-3 font-medium">Email</th>
             <th className="px-4 py-3 font-medium">Phone</th>
             <th className="px-4 py-3 font-medium">Company</th>
+            <th className="px-4 py-3 font-medium">Deal</th>
             <th className="px-4 py-3 font-medium">Source</th>
             <th className="px-4 py-3 font-medium">Priority</th>
             <th className="px-4 py-3 font-medium">Company Size</th>
@@ -61,6 +65,9 @@ export function LeadsTable({
               <td className="px-4 py-3 text-neutral-600">{lead.email || '—'}</td>
               <td className="px-4 py-3 text-neutral-600">{lead.phone || '—'}</td>
               <td className="px-4 py-3 text-neutral-600">{lead.company || '—'}</td>
+              <td className="px-4 py-3">
+                <DealSelect deals={deals} value={lead.deal_id} onChange={(deal_id) => updateLead(lead.id, { deal_id })} />
+              </td>
               <td className="px-4 py-3">
                 <StatusSelect
                   options={LEAD_SOURCES}

@@ -7,6 +7,7 @@ import { signOut } from '@/app/actions';
 
 const LINKS = [
   { href: '/', label: 'Dashboard' },
+  { href: '/accounts', label: 'Accounts' },
   { href: '/leads', label: 'Leads' },
   { href: '/instantly-leads', label: 'Instantly Leads' },
   { href: '/deals', label: 'Deals' },
@@ -32,7 +33,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   return (
     <>
       {LINKS.map((link) => {
-        const active = pathname === link.href;
+        const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
         return (
           <Link
             key={link.href}

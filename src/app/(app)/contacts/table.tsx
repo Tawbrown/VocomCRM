@@ -119,7 +119,7 @@ export function ContactsTable({
                     ) : (
                       <span
                         className="text-xs text-neutral-300"
-                        title="Delete this from its own page (Leads / Instantly Leads / LinkedIn Activity) — Contacts is a combined view"
+                        title="Delete this from its own page (Leads / Instantly Leads / LinkedIn Activity / an account's Contacts) — Contacts is a combined view"
                       >
                         —
                       </span>

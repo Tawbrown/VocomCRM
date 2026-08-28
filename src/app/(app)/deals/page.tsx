@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { DEAL_PIPELINE_STATUSES, type Deal, type Rep } from '@/lib/types';
+import { DEAL_PIPELINE_STATUSES, type Account, type Deal, type Rep } from '@/lib/types';
 import { AddDealForm } from './add-deal-form';
 import { Gantt } from './gantt';
 import { DealsTable } from './table';
@@ -7,9 +7,10 @@ import { DealsTable } from './table';
 export default async function DealsPage() {
   const supabase = await createClient();
 
-  const [{ data: deals }, { data: reps }] = await Promise.all([
+  const [{ data: deals }, { data: reps }, { data: accounts }] = await Promise.all([
     supabase.from('deals').select('*').order('start_date', { ascending: true }).returns<Deal[]>(),
-    supabase.from('reps').select('*').order('name').returns<Rep[]>()
+    supabase.from('reps').select('*').order('name').returns<Rep[]>(),
+    supabase.from('accounts').select('*').order('name').returns<Account[]>()
   ]);
 
   const allDeals = deals ?? [];
@@ -50,7 +51,7 @@ export default async function DealsPage() {
 
       <AddDealForm />
 
-      <DealsTable deals={allDeals} reps={reps ?? []} statuses={DEAL_PIPELINE_STATUSES} />
+      <DealsTable deals={allDeals} reps={reps ?? []} accounts={accounts ?? []} statuses={DEAL_PIPELINE_STATUSES} />
     </div>
   );
 }

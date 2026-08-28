@@ -1,7 +1,7 @@
 import { BarTrend } from '@/components/bar-trend';
 import { BreakdownBars } from '@/components/breakdown-bars';
 import { createClient } from '@/lib/supabase/server';
-import { LEAD_STATUSES, type Lead, type Rep } from '@/lib/types';
+import { LEAD_STATUSES, type Deal, type Lead, type Rep } from '@/lib/types';
 import { LeadsTable } from './table';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -15,13 +15,14 @@ const STATUS_COLORS: Record<string, string> = {
 export default async function LeadsPage() {
   const supabase = await createClient();
 
-  const [{ data: leads }, { data: reps }] = await Promise.all([
+  const [{ data: leads }, { data: reps }, { data: deals }] = await Promise.all([
     supabase
       .from('website_leads')
       .select('*')
       .order('created_at', { ascending: false })
       .returns<Lead[]>(),
-    supabase.from('reps').select('*').order('name').returns<Rep[]>()
+    supabase.from('reps').select('*').order('name').returns<Rep[]>(),
+    supabase.from('deals').select('*').order('start_date', { ascending: false }).returns<Deal[]>()
   ]);
 
   const allLeads = leads ?? [];
@@ -45,7 +46,7 @@ export default async function LeadsPage() {
         <BreakdownBars title="By status" items={statusBreakdown} />
       </div>
 
-      <LeadsTable leads={allLeads} reps={reps ?? []} statuses={LEAD_STATUSES} />
+      <LeadsTable leads={allLeads} reps={reps ?? []} deals={deals ?? []} statuses={LEAD_STATUSES} />
     </div>
   );
 }
