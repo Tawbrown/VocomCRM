@@ -3,7 +3,8 @@
 import { useTransition } from 'react';
 import { updateAccount } from '@/app/actions';
 import { RepSelect } from '@/components/rep-select';
-import type { Account, Rep } from '@/lib/types';
+import { StatusSelect } from '@/components/status-select';
+import { REGIONS, type Account, type Rep } from '@/lib/types';
 
 function TextField({
   label,
@@ -50,6 +51,14 @@ export function AccountFieldsForm({ account, reps }: { account: Account; reps: R
         value={account.company_size}
         onChange={(company_size) => updateAccount(account.id, { company_size })}
       />
+      <div>
+        <label className="mb-1 block text-xs font-medium text-neutral-500">Region</label>
+        <StatusSelect
+          options={['Unset', ...REGIONS]}
+          value={account.region ?? 'Unset'}
+          onChange={(region) => updateAccount(account.id, { region: region === 'Unset' ? null : region })}
+        />
+      </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-neutral-500">Assigned rep</label>
         <RepSelect

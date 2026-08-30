@@ -10,7 +10,15 @@ import { NotesButton } from '@/components/notes-button';
 import { RepSelect } from '@/components/rep-select';
 import { StatusSelect } from '@/components/status-select';
 import { buildCsv, downloadCsv } from '@/lib/csv-export';
-import { DEAL_PIPELINE_STATUSES, type Account, type Deal, type DealPipelineStatus, type Rep } from '@/lib/types';
+import {
+  DEAL_PIPELINE_STATUSES,
+  DIVISIONS,
+  LEAD_SOURCES,
+  type Account,
+  type Deal,
+  type DealPipelineStatus,
+  type Rep
+} from '@/lib/types';
 import { useHighlightRow } from '@/lib/use-highlight-row';
 
 function TextCell({
@@ -105,6 +113,31 @@ function AccountCell({ deal, accounts }: { deal: Deal; accounts: Account[] }) {
   );
 }
 
+const STALE_OPEN_STATUSES: DealPipelineStatus[] = ['Prospecting', 'Proposal', 'Negotiation'];
+
+function daysInStage(stageChangedAt: string): number {
+  return Math.floor((Date.now() - new Date(stageChangedAt).getTime()) / (24 * 60 * 60 * 1000));
+}
+
+// Fibre is build-to-order with 6-10 week lead times — an open deal sitting in the same
+// stage past that window is worth a rep's attention, past double that is a real stall.
+function StageDurationCell({ deal }: { deal: Deal }) {
+  const days = daysInStage(deal.stage_changed_at);
+  const isOpen = STALE_OPEN_STATUSES.includes(deal.status);
+  const colorClass = !isOpen
+    ? 'text-neutral-400'
+    : days > 70
+      ? 'font-semibold text-red-600'
+      : days > 42
+        ? 'font-medium text-amber-600'
+        : 'text-neutral-600';
+  return (
+    <span className={colorClass} title={isOpen && days > 42 ? `${days} days without a stage change` : undefined}>
+      {days}d
+    </span>
+  );
+}
+
 function SelectAllCheckbox({
   checked,
   indeterminate,
@@ -139,7 +172,10 @@ type SortableKey =
   | 'value'
   | 'expected_close_date'
   | 'assigned_rep'
-  | 'status';
+  | 'status'
+  | 'division'
+  | 'source'
+  | 'stage_days';
 type SortDirection = 'asc' | 'desc';
 
 function SortHeader({
@@ -187,6 +223,7 @@ export function DealsTable({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [repFilter, setRepFilter] = useState<string>('all');
+  const [divisionFilter, setDivisionFilter] = useState<string>('all');
   const [sort, setSort] = useState<{ key: SortableKey; direction: SortDirection }>({
     key: 'start_date',
     direction: 'asc'
@@ -224,6 +261,8 @@ export function DealsTable({
       }
       case 'status':
         return DEAL_PIPELINE_STATUSES.indexOf(a.status) - DEAL_PIPELINE_STATUSES.indexOf(b.status);
+      case 'stage_days':
+        return daysInStage(a.stage_changed_at) - daysInStage(b.stage_changed_at);
       default:
         return (a[key] ?? '').localeCompare(b[key] ?? '');
     }
@@ -235,6 +274,7 @@ export function DealsTable({
     if (repFilter !== 'all') {
       rows = repFilter === 'unassigned' ? rows.filter((d) => !d.assigned_rep_id) : rows.filter((d) => d.assigned_rep_id === repFilter);
     }
+    if (divisionFilter !== 'all') rows = rows.filter((d) => d.division === divisionFilter);
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter((d) =>
@@ -248,9 +288,9 @@ export function DealsTable({
       return sort.direction === 'asc' ? cmp : -cmp;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deals, search, statusFilter, repFilter, sort, repNameById]);
+  }, [deals, search, statusFilter, repFilter, divisionFilter, sort, repNameById]);
 
-  const hasActiveFilter = Boolean(search) || statusFilter !== 'all' || repFilter !== 'all';
+  const hasActiveFilter = Boolean(search) || statusFilter !== 'all' || repFilter !== 'all' || divisionFilter !== 'all';
 
   function toggleAllVisible(checked: boolean) {
     const visibleIds = filteredAndSorted.map((d) => d.id);
@@ -353,6 +393,21 @@ export function DealsTable({
             ))}
           </select>
         </label>
+        <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+          Division
+          <select
+            value={divisionFilter}
+            onChange={(e) => setDivisionFilter(e.target.value)}
+            className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700"
+          >
+            <option value="all">All</option>
+            {DIVISIONS.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
           type="button"
           onClick={exportDeals}
@@ -433,6 +488,9 @@ export function DealsTable({
                 <th className="px-4 py-3 font-medium">Notes</th>
                 <SortHeader label="Assigned Rep" sortKey="assigned_rep" sort={sort} onSort={toggleSort} />
                 <SortHeader label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
+                <SortHeader label="Days in Stage" sortKey="stage_days" sort={sort} onSort={toggleSort} />
+                <SortHeader label="Division" sortKey="division" sort={sort} onSort={toggleSort} />
+                <SortHeader label="Source" sortKey="source" sort={sort} onSort={toggleSort} />
                 <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
@@ -496,6 +554,25 @@ export function DealsTable({
                       options={statuses}
                       value={deal.status}
                       onChange={(status) => updateDeal(deal.id, { status: status as Deal['status'] })}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <StageDurationCell deal={deal} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusSelect
+                      options={['Unset', ...DIVISIONS]}
+                      value={deal.division ?? 'Unset'}
+                      onChange={(division) => updateDeal(deal.id, { division: division === 'Unset' ? null : division })}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusSelect
+                      options={['Unset', ...LEAD_SOURCES]}
+                      value={deal.source ?? 'Unset'}
+                      onChange={(source) =>
+                        updateDeal(deal.id, { source: source === 'Unset' ? null : (source as Deal['source']) })
+                      }
                     />
                   </td>
                   <td className="px-4 py-3">

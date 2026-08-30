@@ -5,7 +5,8 @@ import { useMemo, useState, useTransition } from 'react';
 import { deleteAccount, updateAccount } from '@/app/actions';
 import { DeleteButton } from '@/components/delete-button';
 import { RepSelect } from '@/components/rep-select';
-import type { Account, Rep } from '@/lib/types';
+import { StatusSelect } from '@/components/status-select';
+import { REGIONS, type Account, type Rep } from '@/lib/types';
 import { useHighlightRow } from '@/lib/use-highlight-row';
 
 function Cell({ value, onChange, width = 'w-32' }: { value: string | null; onChange: (value: string) => Promise<void>; width?: string }) {
@@ -45,7 +46,7 @@ export function AccountsTable({
     let rows = accounts;
     if (q) {
       rows = rows.filter((a) =>
-        [a.name, a.hq, a.website, a.industry].filter(Boolean).some((field) => field!.toLowerCase().includes(q))
+        [a.name, a.hq, a.website, a.industry, a.region].filter(Boolean).some((field) => field!.toLowerCase().includes(q))
       );
     }
     const sorted = [...rows];
@@ -107,6 +108,7 @@ export function AccountsTable({
                 <th className="px-4 py-3 font-medium">Website</th>
                 <th className="px-4 py-3 font-medium">Industry</th>
                 <th className="px-4 py-3 font-medium">Size</th>
+                <th className="px-4 py-3 font-medium">Region</th>
                 <th className="px-4 py-3 font-medium">Assigned Rep</th>
                 <th className="px-4 py-3 font-medium">POCs</th>
                 <th className="px-4 py-3 font-medium">Deals</th>
@@ -135,6 +137,13 @@ export function AccountsTable({
                       value={account.company_size}
                       onChange={(company_size) => updateAccount(account.id, { company_size })}
                       width="w-20"
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusSelect
+                      options={['Unset', ...REGIONS]}
+                      value={account.region ?? 'Unset'}
+                      onChange={(region) => updateAccount(account.id, { region: region === 'Unset' ? null : region })}
                     />
                   </td>
                   <td className="px-4 py-3">

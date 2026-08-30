@@ -26,7 +26,18 @@ export const STATUS_COLORS: Record<string, string> = {
   Other: 'bg-neutral-100 text-neutral-500',
   Low: 'bg-neutral-100 text-neutral-500',
   Medium: 'bg-amber-100 text-amber-700',
-  High: 'bg-red-100 text-red-700'
+  High: 'bg-red-100 text-red-700',
+  // Region (accounts.region)
+  'US-East': 'bg-blue-100 text-blue-700',
+  'US-Central': 'bg-sky-100 text-sky-700',
+  'US-West': 'bg-cyan-100 text-cyan-700',
+  Canada: 'bg-red-100 text-red-700',
+  APAC: 'bg-teal-100 text-teal-700',
+  EMEA: 'bg-amber-100 text-amber-700',
+  // 'Other' already defined above (from LeadSource) — Region's 'Other' reuses it
+  // Division (deals.division)
+  'Vocom International': 'bg-blue-100 text-blue-700',
+  'Vocom AI': 'bg-purple-100 text-purple-700'
 };
 
 export function StatusSelect({

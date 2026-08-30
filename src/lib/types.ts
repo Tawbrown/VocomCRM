@@ -29,6 +29,12 @@ export const DEAL_PIPELINE_STATUSES: DealPipelineStatus[] = [
 export type FeedbackStatus = 'Open' | 'In Progress' | 'Resolved' | "Won't Fix";
 export const FEEDBACK_STATUSES: FeedbackStatus[] = ['Open', 'In Progress', 'Resolved', "Won't Fix"];
 
+export type Region = 'US-East' | 'US-Central' | 'US-West' | 'Canada' | 'APAC' | 'EMEA' | 'Other';
+export const REGIONS: Region[] = ['US-East', 'US-Central', 'US-West', 'Canada', 'APAC', 'EMEA', 'Other'];
+
+export type Division = 'Vocom International' | 'Vocom AI';
+export const DIVISIONS: Division[] = ['Vocom International', 'Vocom AI'];
+
 export interface Rep {
   id: string;
   name: string;
@@ -62,6 +68,7 @@ export interface Account {
   website: string | null;
   industry: string | null;
   company_size: string | null;
+  region: string | null;
   notes: string | null;
   assigned_rep_id: string | null;
   created_at: string;
@@ -195,6 +202,9 @@ export interface Deal {
   created_at: string;
   updated_at: string;
   account_id: string | null;
+  division: string | null;
+  source: LeadSource | null;
+  stage_changed_at: string;
 }
 
 export interface Feedback {

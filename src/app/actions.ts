@@ -222,12 +222,15 @@ export async function updateDeal(
     company: string;
     pic: string;
     product: string;
+    division: string | null;
+    source: LeadSource | null;
   }>
 ) {
   const supabase = await createClient();
+  const now = new Date().toISOString();
   const { data: updated } = await supabase
     .from('deals')
-    .update({ ...fields, updated_at: new Date().toISOString() })
+    .update({ ...fields, updated_at: now, ...(fields.status ? { stage_changed_at: now } : {}) })
     .eq('id', id)
     .select('customer_name, company')
     .maybeSingle();
@@ -256,7 +259,11 @@ export async function bulkUpdateDeals(
 ) {
   if (ids.length === 0 || Object.keys(fields).length === 0) return;
   const supabase = await createClient();
-  await supabase.from('deals').update({ ...fields, updated_at: new Date().toISOString() }).in('id', ids);
+  const now = new Date().toISOString();
+  await supabase
+    .from('deals')
+    .update({ ...fields, updated_at: now, ...(fields.status ? { stage_changed_at: now } : {}) })
+    .in('id', ids);
   // Bulk edits intentionally skip notifyAssignment: firing it per row would spam the
   // assignee with N notifications for what the user experienced as a single action.
   revalidatePath('/deals');
@@ -287,6 +294,7 @@ export async function updateAccount(
     website: string | null;
     industry: string | null;
     company_size: string | null;
+    region: string | null;
     notes: string | null;
     assigned_rep_id: string | null;
   }>
