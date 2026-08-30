@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 
-const STATUS_COLORS: Record<string, string> = {
+export const STATUS_COLORS: Record<string, string> = {
   New: 'bg-neutral-100 text-neutral-700',
   Contacted: 'bg-blue-100 text-blue-700',
   Qualified: 'bg-amber-100 text-amber-700',

@@ -250,6 +250,18 @@ export async function deleteDeal(id: string) {
   revalidatePath('/deals');
 }
 
+export async function bulkUpdateDeals(
+  ids: string[],
+  fields: Partial<{ assigned_rep_id: string | null; status: DealPipelineStatus }>
+) {
+  if (ids.length === 0 || Object.keys(fields).length === 0) return;
+  const supabase = await createClient();
+  await supabase.from('deals').update({ ...fields, updated_at: new Date().toISOString() }).in('id', ids);
+  // Bulk edits intentionally skip notifyAssignment: firing it per row would spam the
+  // assignee with N notifications for what the user experienced as a single action.
+  revalidatePath('/deals');
+}
+
 export async function addAccount(formData: FormData) {
   const supabase = await createClient();
   const name = (formData.get('name') as string)?.trim();

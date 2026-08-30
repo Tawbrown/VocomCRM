@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { DEAL_PIPELINE_STATUSES, type Account, type Deal, type Rep } from '@/lib/types';
 import { AddDealForm } from './add-deal-form';
-import { Gantt } from './gantt';
+import { StatusBreakdown } from './status-breakdown';
 import { DealsTable } from './table';
 
 export default async function DealsPage() {
@@ -22,8 +22,8 @@ export default async function DealsPage() {
     <div>
       <h1 className="mb-1 text-xl font-semibold text-neutral-900">Deals</h1>
       <p className="mb-6 text-sm text-neutral-500">
-        Customer info, deal value, PIC, and product/order — visualized as a timeline plus a
-        full editable table below.
+        Customer info, deal value, PIC, and product/order — broken down by pipeline status
+        below, plus a full editable, sortable, filterable table.
       </p>
 
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -46,7 +46,7 @@ export default async function DealsPage() {
       </div>
 
       <div className="mb-6">
-        <Gantt deals={allDeals} />
+        <StatusBreakdown deals={allDeals} />
       </div>
 
       <AddDealForm />
